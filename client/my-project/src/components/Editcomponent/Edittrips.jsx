@@ -167,7 +167,7 @@ function Edittrips() {
   if (loading) return <p className="text-center text-lg">Loading...</p>;
   if (error) return <p className="text-center text-lg text-red-500">Error: {error}</p>;
 
-  const imageUrl = tripDetails?.file_path ? `https://admin.yeahtrips.in${tripDetails.file_path.replace(/\\/g, '/')}` : '';
+  const imageUrl = tripDetails?.file_path ? `https://betayeah.yeahtrips.in${tripDetails.file_path.replace(/\\/g, '/')}` : '';
 
 
 

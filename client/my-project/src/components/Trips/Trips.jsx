@@ -53,7 +53,7 @@ function Alltrips() {
             >
               <div className="relative w-full flex items-center justify-center">
                 <img
-                  src={`https://admin.yeahtrips.in${item.file_path}`}
+                  src={`https://betayeah.yeah.in${item.file_path}`}
                   alt={item.trip_name}
                   className="object-cover"
                   style={{ width: '100%', height: '200px' }} 
