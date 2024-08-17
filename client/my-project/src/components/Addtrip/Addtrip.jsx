@@ -15,10 +15,7 @@ function Addtripdetails() {
     const [destination, setDestination] = useState("");
     const [trip_duration, setTrip_duration] = useState("");
     const [traveller_type, setTraveller_type] = useState("");
-    const [TAG_ID, setTagId] = useState("")
-    const [status, setStatus] = useState("");
-    const [link, setLink] = useState("");
-    const [profile_mode, setProfile_mode] = useState("");
+    
     const [inclusion, setInclusion] = useState("");
     const [exclusion, setExclusion] = useState("");
     const [points_to_note, SetPoints_to_note] = useState("");
@@ -60,10 +57,6 @@ function Addtripdetails() {
                 destination,
                 trip_duration,
                 traveller_type,
-                TAG_ID,
-                status,
-                link,
-                profile_mode,
                 inclusion,
                 exclusion,
                 points_to_note,
@@ -87,10 +80,6 @@ function Addtripdetails() {
             setDestination("");
             setTrip_duration("");
             setTraveller_type("");
-            setTagId("");
-            setStatus("");
-            setLink("");
-            setProfile_mode("");
             setInclusion("");
             setExclusion("");
             SetPoints_to_note("");
@@ -170,7 +159,7 @@ function Addtripdetails() {
 
                         <input
                             type="text"
-                            placeholder="Trip Start Pont"
+                            placeholder="Trip Start Point"
                             className="w-full px-4 py-2 border rounded-md mb-4 focus:outline-none focus:border-blue-500"
                             value={trip_start_point}
                             onChange={(e) => setTrip_start_point(e.target.value)}
@@ -178,7 +167,7 @@ function Addtripdetails() {
 
                         <input
                             type="text"
-                            placeholder="Trip End Pont"
+                            placeholder="Trip End Point"
                             className="w-full px-4 py-2 border rounded-md mb-4 focus:outline-none focus:border-blue-500"
                             value={trip_end_point}
                             onChange={(e) => setTrip_end_point(e.target.value)}
@@ -210,39 +199,12 @@ function Addtripdetails() {
                             onChange={(e) => setTraveller_type(e.target.value)}
                         />
 
-                        <input
-                            type="text"
-                            placeholder="Tag  ID"
-                            className="w-full px-4 py-2 border rounded-md mb-4 focus:outline-none focus:border-blue-500"
-                            value={TAG_ID}
-                            onChange={(e) => setTagId(e.target.value)}
-                        />
-
-                        <input
-                            type="text"
-                            placeholder="Status"
-                            className="w-full px-4 py-2 border rounded-md mb-4 focus:outline-none focus:border-blue-500"
-                            value={status}
-                            onChange={(e) => setStatus(e.target.value)}
-                        />
-
-                        <input
-                            type="text"
-                            placeholder="Link"
-                            className="w-full px-4 py-2 border rounded-md mb-4 focus:outline-none focus:border-blue-500"
-                            value={link}
-                            onChange={(e) => setLink(e.target.value)}
-                        />
+                        
+                       
 
 
 
-                        <input
-                            type="text"
-                            placeholder="Profile Mode"
-                            className="w-full px-4 py-2 border rounded-md mb-4 focus:outline-none focus:border-blue-500"
-                            value={profile_mode}
-                            onChange={(e) => setProfile_mode(e.target.value)}
-                        />
+                       
 
                         <input
                             type="text"

@@ -53,7 +53,7 @@ function Alltrips() {
             >
               <div className="relative w-full flex items-center justify-center">
                 <img
-                  src={`https://betayeah.yeahtrips.in${item.file_path}`}
+                  src={`https://admin.yeahtrips.in${item.file_path}`}
                   alt={item.trip_name}
                   className="object-cover"
                   style={{ width: '100%', height: '200px' }} 
@@ -78,7 +78,7 @@ function Alltrips() {
                 </div>
                 <div className="flex justify-between mt-2 space-x-2">
                   <button className="bg-blue-600 text-white py-2 px-4 rounded-lg shadow-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-300 transition duration-300"  onClick={() => handleEdit(item.trip_id)} >
-                    Edit
+                 View
                   </button>
                   <button className="bg-red-600 text-white py-2 px-4 rounded-lg shadow-lg hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-300 transition duration-300" onClick={()=>handleDelete(item.trip_id)}>
                     Delete

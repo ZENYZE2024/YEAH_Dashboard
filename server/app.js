@@ -12,6 +12,7 @@ app.use(cors());
 
 app.use(express.json());
 
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 app.use(bodyParser.json());
 const pool = mysql.createPool({
@@ -26,7 +27,7 @@ const pool = mysql.createPool({
 app.get('/alltrips', async (req, res) => {
     try {
         const connection = await pool.getConnection();
-        
+
         const [rows] = await connection.query(`
             SELECT tripdata.*, images.file_path
             FROM tripdata
@@ -50,7 +51,7 @@ app.get('/edittrips', async (req, res) => {
 
     try {
         const connection = await pool.getConnection();
-        
+
         const [rows] = await connection.query(
             `SELECT tripdata.*, images.file_path
              FROM tripdata
@@ -112,7 +113,7 @@ app.put('/updatetrip', async (req, res) => {
                 .map(key => `${key} = ?`)
                 .join(', ');
 
-            if (setClause) { 
+            if (setClause) {
                 const sqlUpdate = `UPDATE tripdata SET ${setClause} WHERE trip_id = ?`;
                 const valuesUpdate = [...Object.values(updateFields), trip_id];
 
@@ -184,11 +185,11 @@ app.put('/updatetinerary', async (req, res) => {
         res.status(500).json({ error: 'Database connection failed' });
     }
 });
-app.use('/addtrips', async (req, res) => {
+app.post('/addtrips', async (req, res) => {
     const {
         trip_name, trip_code, slug, cost, seats, trip_start_date, end_date,
         trip_start_point, trip_end_point, destination, trip_duration,
-        traveller_type, TAG_ID, status, link, profile_mode, inclusion,
+        traveller_type,  inclusion,
         exclusion, points_to_note, trip_type, days
     } = req.body;
 
@@ -202,15 +203,15 @@ app.use('/addtrips', async (req, res) => {
             INSERT INTO tripdata (
                 trip_name, trip_code, slug, cost, seats, trip_start_date, end_date, 
                 trip_start_point, trip_end_point, destination, trip_duration, 
-                traveller_type, TAG_ID, status, link, profile_mode, inclusion, 
+                traveller_type,  inclusion, 
                 exclusion, points_to_note, trip_type
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `;
 
         const tripValues = [
             trip_name, trip_code, slug, cost, seats, trip_start_date, end_date,
             trip_start_point, trip_end_point, destination, trip_duration,
-            traveller_type, TAG_ID, status, link, profile_mode, inclusion,
+            traveller_type,  inclusion,
             exclusion, points_to_note, trip_type
         ];
 
@@ -236,46 +237,96 @@ app.use('/addtrips', async (req, res) => {
 
         res.json({ message: 'Trip and itinerary data inserted successfully!' });
     } catch (error) {
-        if (connection) await connection.rollback(); 
+        if (connection) await connection.rollback();
         console.error('Error inserting trip data:', error);
         res.status(500).json({ error: 'Failed to insert trip data' });
     } finally {
-        if (connection) connection.release(); 
+        if (connection) connection.release();
     }
 });
 
 app.delete('/deletetrips/:trip_id', async (req, res) => {
-    const { trip_id } = req.params; 
-  
-    if (!trip_id) {
-      return res.status(400).json({ message: 'Trip ID is required' });
-    }
-  
-    const connection = await pool.getConnection(); 
-  
-    try {
-      await connection.beginTransaction(); 
-  
-      await connection.query('DELETE FROM tripitenary WHERE trip_id = ?', [trip_id]);
-  
-      await connection.query('DELETE FROM tripdata WHERE trip_id = ?', [trip_id]);
-  
-      await connection.commit(); 
-      res.status(200).json({ message: 'Trip deleted successfully' });
-    } catch (error) {
-      await connection.rollback(); 
-      console.error('Error deleting trip:', error);
-      res.status(500).json({ message: 'Error deleting trip' });
-    } finally {
-      connection.release(); 
-    }
-  });
-  app.use(express.static(path.join(__dirname, 'public')));
+    const { trip_id } = req.params;
 
-  app.get('*', (req, res) => {
-      res.sendFile(path.join(__dirname, 'public', 'index.html'));
-  });
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+    if (!trip_id) {
+        return res.status(400).json({ message: 'Trip ID is required' });
+    }
+
+    const connection = await pool.getConnection();
+
+    try {
+        await connection.beginTransaction();
+
+        await connection.query('DELETE FROM tripitenary WHERE trip_id = ?', [trip_id]);
+
+        await connection.query('DELETE FROM tripdata WHERE trip_id = ?', [trip_id]);
+
+        await connection.commit();
+        res.status(200).json({ message: 'Trip deleted successfully' });
+    } catch (error) {
+        await connection.rollback();
+        console.error('Error deleting trip:', error);
+        res.status(500).json({ message: 'Error deleting trip' });
+    } finally {
+        connection.release();
+    }
+});
+
+app.delete('/deletetrips/:trip_id', async (req, res) => {
+    const { trip_id } = req.params;
+
+    if (!trip_id) {
+        return res.status(400).json({ message: 'Trip ID is required' });
+    }
+
+    const connection = await pool.getConnection();
+
+    try {
+        await connection.beginTransaction();
+
+        await connection.query('DELETE FROM tripitenary WHERE trip_id = ?', [trip_id]);
+
+        await connection.query('DELETE FROM tripdata WHERE trip_id = ?', [trip_id]);
+
+        await connection.commit();
+        res.status(200).json({ message: 'Trip deleted successfully' });
+    } catch (error) {
+        await connection.rollback();
+        console.error('Error deleting trip:', error);
+        res.status(500).json({ message: 'Error deleting trip' });
+    } finally {
+        connection.release();
+    }
+});
+
+app.get('/getbookingdetails', async (req, res) => {
+    const trip_id= req.query.trip_id;
+    if (!trip_id) {
+        return res.status(400).json({ message: 'Trip ID is required' });
+    }
+
+
+
+
+    try {
+        const connection = await pool.getConnection();
+
+        const [rows] = await connection.query(`
+             SELECT * FROM members WHERE trip_id = ?
+            `, [trip_id]);
+
+        connection.release();
+        res.json(rows);
+    } catch (error) {
+        console.error('Error connecting to the database:', err);
+        res.status(500).json({ error: 'Database connection failed' });
+    }
+})
+app.use(express.static(path.join(__dirname, 'public')));
+
+app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
 
 app.listen(process.env.PORT, () => {
     console.log(`Server is running on https://admin.yeahtrips.in:${process.env.PORT}`);
