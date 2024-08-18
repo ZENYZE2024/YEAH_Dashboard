@@ -17,17 +17,22 @@ function Edittrips() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [detailsResponse, itineraryResponse] = await Promise.all([
+        const [detailsResponse, itineraryResponse,bookings] = await Promise.all([
           axios.get("https://admin.yeahtrips.in/edittrips", {
             params: { trip_id: location.state.trip_id },
           }),
           axios.get("https://admin.yeahtrips.in/tripitenary", {
             params: { trip_id: location.state.trip_id },
+          }),
+          axios.get("https://admin.yeahtrips.in/getbookingdetails",{
+            params: { trip_id: location.state.trip_id },
+
           })
         ]);
 
         setTripDetails(detailsResponse.data[0]);
         setTripItinerary(itineraryResponse.data);
+        setBookings(bookings.data)
         setLoading(false);
       } catch (error) {
         console.error("Error fetching trip details or itinerary:", error);
@@ -41,24 +46,24 @@ function Edittrips() {
     fetchData();
   }, [location.state.trip_id]);
 
-  useEffect(() => async () => {
-    const Fetchbooking = async () => {
-      try {
-        const response = await axios.get('https://admin.yeahtrips.in/getbookingdetails', {
-          params: { trip_id: location.state.trip_id },
-        });
-        console.log("bookings", response.data);
-        setBookings(response.data)
-        setLoading(false);
+  // useEffect(() => async () => {
+  //   const Fetchbooking = async () => {
+  //     try {
+  //       const response = await axios.get('https://admin.yeahtrips.in/getbookingdetails', {
+  //         params: { trip_id: location.state.trip_id },
+  //       });
+  //       console.log("bookings", response.data);
+  //       setBookings(response.data)
+  //       setLoading(false);
 
-      } catch (error) {
-        console.error('Error fetching data:', error);
-        setError(error.response ? error.response.data : error.message || 'Error fetching data');
-        setLoading(false);
-      }
-    }
-    Fetchbooking();
-  }, [location.state.trip_id]);
+  //     } catch (error) {
+  //       console.error('Error fetching data:', error);
+  //       setError(error.response ? error.response.data : error.message || 'Error fetching data');
+  //       setLoading(false);
+  //     }
+  //   }
+  //   Fetchbooking();
+  // }, [location.state.trip_id]);
 
   const convertToVCF = (data) => {
     let vcfString = "";

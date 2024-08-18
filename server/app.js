@@ -304,10 +304,6 @@ app.get('/getbookingdetails', async (req, res) => {
     if (!trip_id) {
         return res.status(400).json({ message: 'Trip ID is required' });
     }
-
-
-
-
     try {
         const connection = await pool.getConnection();
 
