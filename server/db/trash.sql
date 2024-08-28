@@ -1,0 +1,20 @@
+CREATE TABLE triptrash (
+    trip_id INT PRIMARY KEY,
+    trip_name VARCHAR(255),
+    trip_code VARCHAR(50),
+    cost DECIMAL(10, 2),
+    seats INT,
+    trip_start_date DATE,
+    end_date DATE,
+    trip_start_point VARCHAR(255),
+    trip_end_point VARCHAR(255),
+    destination VARCHAR(255),
+    trip_duration VARCHAR(50),
+    traveller_type VARCHAR(50),
+    inclusion TEXT,
+    exclusion TEXT,
+    points_to_note TEXT,
+    trip_type VARCHAR(50),
+    days INT,
+    deleted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);

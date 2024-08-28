@@ -13,9 +13,12 @@ function Edittrips() {
   const [isEditingItinerary, setIsEditingItinerary] = useState(false);
   const location = useLocation();
   const [bookings, setBookings] = useState([]);
-
+  const [role, setRole] = useState(""); 
   useEffect(() => {
     const fetchData = async () => {
+
+      const storedRole = localStorage.getItem('role');
+        setRole(storedRole);
       try {
         const [detailsResponse, itineraryResponse,bookings] = await Promise.all([
           axios.get("https://admin.yeahtrips.in/edittrips", {
@@ -46,24 +49,7 @@ function Edittrips() {
     fetchData();
   }, [location.state.trip_id]);
 
-  // useEffect(() => async () => {
-  //   const Fetchbooking = async () => {
-  //     try {
-  //       const response = await axios.get('https://admin.yeahtrips.in/getbookingdetails', {
-  //         params: { trip_id: location.state.trip_id },
-  //       });
-  //       console.log("bookings", response.data);
-  //       setBookings(response.data)
-  //       setLoading(false);
-
-  //     } catch (error) {
-  //       console.error('Error fetching data:', error);
-  //       setError(error.response ? error.response.data : error.message || 'Error fetching data');
-  //       setLoading(false);
-  //     }
-  //   }
-  //   Fetchbooking();
-  // }, [location.state.trip_id]);
+ 
 
   const convertToVCF = (data) => {
     let vcfString = "";
@@ -172,7 +158,7 @@ function Edittrips() {
   if (loading) return <p className="text-center text-lg">Loading...</p>;
   if (error) return <p className="text-center text-lg text-red-500">Error: {error}</p>;
 
-  const imageUrl = tripDetails?.file_path ? `https://betayeah.yeahtrips.in${tripDetails.file_path.replace(/\\/g, '/')}` : '';
+  const imageUrl = tripDetails?.file_path ? `https://betayeah.yeahtrips.in{tripDetails.file_path.replace(/\\/g, '/')}` : '';
 
 
 
@@ -248,13 +234,15 @@ function Edittrips() {
                   Save
                 </button>
               ) : null}
+              {role !== 'Read-Only' && role !== 'User' && (
               <button
                 onClick={handleEditToggle}
-                className={`${isEditing ? "bg-red-500" : "bg-blue-500"
-                  } text-white px-4 py-2 rounded shadow hover:bg-opacity-75`}
+                className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600"
               >
-                {isEditing ? "Cancel" : "Edit"}
+                {isEditing ? "Cancel Edit" : "Edit"}
               </button>
+            )}
+
             </div>
 
             <hr className="my-8" />
@@ -312,13 +300,15 @@ function Edittrips() {
                   Save
                 </button>
               ) : null}
-              <button
-                onClick={handleEditItineraryToggle}
-                className={`${isEditingItinerary ? "bg-red-500" : "bg-blue-500"
-                  } text-white px-4 py-2 rounded shadow hover:bg-opacity-75`}
-              >
-                {isEditingItinerary ? "Cancel" : "Edit Itinerary"}
-              </button>
+             {role !== 'Read-Only' && role !== 'User'&&(
+               <button
+               onClick={handleEditItineraryToggle}
+               className={`${isEditingItinerary ? "bg-red-500" : "bg-blue-500"
+                 } text-white px-4 py-2 rounded shadow hover:bg-opacity-75`}
+             >
+               {isEditingItinerary ? "Cancel" : "Edit Itinerary"}
+             </button>
+             )}
             </div>
           </>
         )}
@@ -408,3 +398,71 @@ function renderDetail(label, name, details, isEditing, handleChange) {
 }
 
 export default Edittrips;
+
+
+{/* <h2 className="text-2xl font-bold text-gray-800 mb-4">Trip Itinerary</h2>
+
+<div className="space-y-4">
+  {tripItinerary.map((item, index) => (
+    <div key={index} className="bg-gray-100 p-4 rounded-md shadow-sm">
+      {isEditingItinerary ? (
+        <div className="space-y-2">
+          <div className="flex items-center space-x-2 mb-2">
+            <label className="text-gray-600">Date:</label>
+            <input
+              type="text"
+              name="DATE"
+              value={item.DATE || ''}
+              onChange={(e) => handleItineraryChange(index, e)}
+              className="border rounded w-32 p-2"
+            />
+          </div>
+          <input
+            type="text"
+            name="DAY_TITLE"
+            value={item.DAY_TITLE}
+            onChange={(e) => handleItineraryChange(index, e)}
+            className="border rounded w-full p-2"
+            placeholder="Day Title"
+          />
+          <textarea
+            name="DAY_DESCRIPTION"
+            value={item.DAY_DESCRIPTION}
+            onChange={(e) => handleItineraryChange(index, e)}
+            className="border rounded w-full p-2"
+            placeholder="Day Description"
+          />
+        </div>
+      ) : (
+        <div className="space-y-2">
+          <p className="font-bold">Date: {item.DATE}</p>
+          <p className="text-lg font-semibold">{item.DAY_TITLE}</p>
+          <p>{item.DAY_DESCRIPTION}</p>
+        </div>
+      )}
+    </div>
+  ))}
+</div>
+
+<div className="flex justify-end space-x-4 mt-4">
+  {isEditingItinerary ? (
+    <button
+      onClick={handleSaveItinerary}
+      className="bg-green-500 text-white px-4 py-2 rounded shadow hover:bg-green-600"
+    >
+      Save
+    </button>
+  ) : null}
+  <button
+    onClick={handleEditItineraryToggle}
+    className={`${isEditingItinerary ? "bg-red-500" : "bg-blue-500"
+      } text-white px-4 py-2 rounded shadow hover:bg-opacity-75`}
+  >
+    {isEditingItinerary ? "Cancel" : "Edit Itinerary"}
+  </button>
+</div>
+</>
+)}
+
+
+</div> */}
