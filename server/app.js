@@ -574,5 +574,5 @@ app.get('*', (req, res) => {
 });
 
 app.listen(process.env.PORT, () => {
-    console.log(`Server is running on https://tripitenary:${process.env.PORT}`);
+    console.log(`Server is running on https://admin.yeahtrips.in:${process.env.PORT}`);
 });
