@@ -10,6 +10,7 @@ import Login from "./components/Login/Login";
 import Readonly from "./components/readonlylogin/Readonly";
 import Supervisor from "./components/Supervisor/Supervisor";
 import UserDashboard from "./components/Usercomponent/User";
+import Userslist from "./components/Userslist/Userslist";
 function App(){
        return(
         <>
@@ -24,6 +25,7 @@ function App(){
                             <Route path="/dashboardusersread" exact element={<Readonly/>}/>
                             <Route path="/supervisorlogin" exact element={<Supervisor/>}/>
                             <Route path="/userdashboard" exact element={<UserDashboard/>}/>
+                            <Route path="/usersmanagement" exact element={<Userslist/>}/> 
                      </Routes>
               </div>
         </Router>

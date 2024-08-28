@@ -10,8 +10,12 @@ const Dashhboard = () => {
     navigate('/addtrips');
   };
 
+  const handleUserManagementClick = () => {
+    navigate('/usersmanagement');
+  };
+
   return (
-    <div className="flex  bg-gray-100">
+    <div className="flex bg-gray-100">
       <div className="w-64 bg-gray-800 text-white p-5">
         <h1 className="text-2xl font-bold mb-6">Dashboard</h1>
         <ul>
@@ -32,6 +36,7 @@ const Dashhboard = () => {
           </li>
           <li>
             <button
+              onClick={handleUserManagementClick}
               className="w-full text-left py-2 px-4 rounded hover:bg-gray-700"
             >
               User Management

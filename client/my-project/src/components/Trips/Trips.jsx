@@ -45,9 +45,7 @@ function Trips() {
     setView(view === 'published' ? 'trash' : 'published');
   };
 
-  const handleLogin = () => {
-    navigate('/adduser');
-  };
+ 
 
   const handleLogout = () => {
     // Remove token and role from local storage
@@ -69,12 +67,7 @@ function Trips() {
         >
           {view === 'published' ? 'View Trash' : 'View Published'}
         </button>
-        <button
-          className="bg-gradient-to-r from-indigo-500 to-indigo-700 text-white py-2 px-4 rounded-lg shadow-lg hover:from-indigo-600 hover:to-indigo-800 focus:outline-none focus:ring-2 focus:ring-indigo-300 transition duration-300"
-          onClick={handleLogin}
-        >
-          Add User
-        </button>
+       
         <button
           className="bg-gradient-to-r from-red-500 to-red-700 text-white py-2 px-4 rounded-lg shadow-lg hover:from-red-600 hover:to-red-800 focus:outline-none focus:ring-2 focus:ring-red-300 transition duration-300"
           onClick={handleLogout}

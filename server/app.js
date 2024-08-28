@@ -551,6 +551,21 @@ app.get('/userdashboard', async (req, res) => {
 
 });
 
+app.get('/getallusers', async (req, res) => {
+
+
+    try {
+        const connection = await pool.getConnection();
+        const [users] = await connection.query('select  * from tripusers')
+
+        connection.release();
+
+        res.json(users)
+    } catch (error) {
+        res.status(500).json({ message: 'Internal server error' });
+
+    }
+});
 
 app.use(express.static(path.join(__dirname, 'public')));
 
@@ -559,5 +574,5 @@ app.get('*', (req, res) => {
 });
 
 app.listen(process.env.PORT, () => {
-    console.log(`Server is running on https://admin.yeahtrips.in:${process.env.PORT}`);
+    console.log(`Server is running on https://tripitenary:${process.env.PORT}`);
 });
