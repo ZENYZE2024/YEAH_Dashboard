@@ -24,6 +24,8 @@ function Addtripdetails() {
         trip_description: '',
         googlemap: '',
         whatsapplink: '',
+        additionalpickuppoint:''
+
     });
 
     const [days, setDays] = useState([]);
@@ -61,7 +63,7 @@ function Addtripdetails() {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-    
+
         if (formData.trip_start_date > formData.end_date) {
             alert('Trip end date cannot be before the start date.');
             return;
@@ -91,8 +93,13 @@ function Addtripdetails() {
                 form.append(`additional_images_${index}[${i}]`, file);
             });
         });
+        const token = localStorage.getItem('accessToken');
+        const { userId } = JSON.parse(atob(token.split('.')[1]));
+        form.append('userId', userId);
+
 
         try {
+            console.log(form)
             const response = await axios.post('https://admin.yeahtrips.in/addtrips', form, {
                 headers: {
                     'Content-Type': 'multipart/form-data',
@@ -326,6 +333,15 @@ function Addtripdetails() {
                     />
                 </div>
                 <div className="flex flex-col">
+                    <label className="text-sm font-medium text-gray-700 mb-1">Additional Pickup point</label>
+                    <input
+                        type="text"
+                        value={formData.additionalpickuppoint}
+                        onChange={(e) => handleFieldChange('additionalpickuppoint', e.target.value)}
+                        className="border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 p-2"
+                    />
+                </div>
+                <div className="flex flex-col">
                     <label className="text-sm font-medium text-gray-700 mb-1">WhatsApp Link</label>
                     <input
                         type="text"
@@ -414,20 +430,27 @@ function Addtripdetails() {
                         </div>
                     </div>
                 ))}
-                <button
-                    type="button"
-                    onClick={handleAddDay}
-                    className="bg-blue-500 text-white rounded-md p-2"
-                >
-                    Add More Itinerary Days
-                </button>
 
-                <button
-                    type="submit"
-                    className="bg-blue-600 text-white rounded-md p-2 mt-4"
-                >
-                    Submit
-                </button>
+
+                <div>
+                    <button
+                        type="button"
+                        onClick={handleAddDay}
+                        className="bg-blue-500 text-white rounded-md p-2"
+                    >
+                        Add More Itinerary Days
+                    </button>
+                </div>
+                <div>
+                    <button
+                        type="submit"
+                        className="bg-blue-600 text-white rounded-md p-2 mt-4"
+                    >
+                        Submit
+                    </button>
+                </div>
+
+
             </form>
         </div>
     );

@@ -28,7 +28,7 @@ function Trips() {
   }, [view]);
 
   const handleEdit = (trip_id) => {
-    navigate(`/edittrips`, { state: { trip_id } });
+    navigate(`/edittrips/${trip_id}`);
   };
 
   const handleDelete = async (trip_id) => {
@@ -46,10 +46,8 @@ function Trips() {
   };
 
   const handleLogout = () => {
-    // Remove token and role from local storage
     localStorage.removeItem('accessToken');
     localStorage.removeItem('role');
-    // Navigate to home page and replace the history entry
     navigate('/', { replace: true });
   };
 
@@ -76,30 +74,28 @@ function Trips() {
       <div className="bg-white w-full max-w-screen-xl p-6 rounded-lg shadow-lg">
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
           {datas.map((item) => {
-            // Calculate seat percentage
             const totalSeats = item.totalseats || 0;
-            const seatsLeft = item.totalseats - item.seats;
+            const seatsLeft =  item.seats;
             const percentageLeft = (seatsLeft / totalSeats) * 100;
 
-            // Determine background color based on percentage
-            let bgColor = 'bg-white'; // Default background color
-            let seatsBgColor = 'bg-gray-300'; // Default background color for seats section
+            let bgColor = 'bg-white';
+            let seatsBgColor = 'bg-gray-300';
             if (percentageLeft < 50) {
-              bgColor = 'bg-red-500'; // Red for card background
-              seatsBgColor = 'bg-red-300'; // Light red for seats section
+              bgColor = 'bg-red-500';
+              seatsBgColor = 'bg-red-300';
             } else if (percentageLeft < 75) {
-              bgColor = 'bg-blue-500'; // Blue for card background
-              seatsBgColor = 'bg-blue-300'; // Light blue for seats section
+              bgColor = 'bg-blue-500';
+              seatsBgColor = 'bg-blue-300';
             } else {
-              bgColor = 'bg-green-500'; // Green for card background
-              seatsBgColor = 'bg-green-300'; // Light green for seats section
+              bgColor = 'bg-green-500';
+              seatsBgColor = 'bg-green-300';
             }
 
             return (
               <div
                 key={item.trip_id}
                 className={`relative rounded-lg overflow-hidden shadow-lg transition-transform transform hover:scale-105 hover:shadow-2xl ${bgColor}`}
-                style={{ height: '400px' }}
+                style={{ height: '70vh' }}
               >
                 <div className="relative flex flex-col justify-between p-6 text-gray-800 bg-white h-full">
                   <h2 className="text-xl font-semibold text-gray-900 mb-4">{item.trip_name}</h2>
@@ -118,7 +114,19 @@ function Trips() {
                     </div>
                     <div className={`flex items-center gap-2 ${seatsBgColor} p-2 rounded-md`}>
                       <span className="font-semibold text-gray-700">Seats Available:</span>
-                      <span>{totalSeats - item.seats}</span>
+                      <span>{ item.seats}</span>
+                    </div>
+                    <div className="flex items-center gap-2  p-2 rounded-md">
+                      <span className="font-semibold text-gray-700"> Total Seats :</span>
+                      <span>{ item.totalseats}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-semibold text-gray-700">Created By:</span>
+                      <span>{item.created_by}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-semibold text-gray-700">Created At:</span>
+                      <span>{new Date(item.created_at).toLocaleDateString()}</span>
                     </div>
                   </div>
                   <div className="flex justify-between space-x-2 mt-auto">

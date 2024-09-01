@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
-import { useLocation } from "react-router-dom";
+import { useLocation, useParams } from "react-router-dom";
 import { saveAs } from "file-saver";
 import * as XLSX from "xlsx";
 
 function Edittrips() {
+  const { trip_id } = useParams();
   const [tripDetails, setTripDetails] = useState(null);
   const [tripItinerary, setTripItinerary] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -13,43 +14,47 @@ function Edittrips() {
   const [isEditingItinerary, setIsEditingItinerary] = useState(false);
   const location = useLocation();
   const [bookings, setBookings] = useState([]);
-  const [role, setRole] = useState(""); 
+  const [cancellations, setCancellations] = useState([]);
+  const [role, setRole] = useState("");
   useEffect(() => {
     const fetchData = async () => {
 
-      const storedRole = localStorage.getItem('role');
-        setRole(storedRole);
-      try {
-        const [detailsResponse, itineraryResponse,bookings] = await Promise.all([
-          axios.get("https://admin.yeahtrips.in/edittrips", {
-            params: { trip_id: location.state.trip_id },
-          }),
-          axios.get("https://admin.yeahtrips.in/tripitenary", {
-            params: { trip_id: location.state.trip_id },
-          }),
-          axios.get("https://admin.yeahtrips.in/getbookingdetails",{
-            params: { trip_id: location.state.trip_id },
 
-          })
+      const storedRole = localStorage.getItem('role');
+      setRole(storedRole);
+
+      try {
+        const [detailsResponse, itineraryResponse, bookingsResponse,cancellationsresponse] = await Promise.all([
+          axios.get(`https://admin.yeahtrips.in/edittrips/${trip_id}`),
+          axios.get(`https://admin.yeahtrips.in/tripitenary/${trip_id}`, {
+
+          }),
+          axios.get(`https://admin.yeahtrips.in/getbookingdetails/${trip_id}`, {
+
+          }),
+          axios.get(`https://admin.yeahtrips.in/cancellations/${trip_id}`)
         ]);
 
         setTripDetails(detailsResponse.data[0]);
         setTripItinerary(itineraryResponse.data);
-        setBookings(bookings.data)
-        setLoading(false);
+        setBookings(bookingsResponse.data);
+        setCancellations(Array.isArray(cancellationsresponse.data) ? cancellationsresponse.data : []);
+        console.log("cancellation",cancellations)
+
       } catch (error) {
         console.error("Error fetching trip details or itinerary:", error);
-        setError(
-          error.response ? error.response.data : error.message || "Error fetching data"
-        );
+        setError(error.response?.data || error.message || "Error fetching data");
+      } finally {
         setLoading(false);
       }
     };
 
     fetchData();
-  }, [location.state.trip_id]);
 
- 
+    return () => {
+    };
+  }, [location.state?.trip_id]);
+
 
   const convertToVCF = (data) => {
     let vcfString = "";
@@ -158,7 +163,7 @@ function Edittrips() {
   if (loading) return <p className="text-center text-lg">Loading...</p>;
   if (error) return <p className="text-center text-lg text-red-500">Error: {error}</p>;
 
-  
+
 
 
   return (
@@ -180,7 +185,7 @@ function Edittrips() {
               )}
             </h1>
 
-           
+
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
               <div className="space-y-2">
@@ -197,7 +202,7 @@ function Edittrips() {
               </div>
               <div className="space-y-2">
                 {renderDetail("Traveller Type", "traveller_type", tripDetails, isEditing, handleInputChange)}
-                
+
                 {renderDetail("Inclusion", "inclusion", tripDetails, isEditing, handleInputChange)}
                 {renderDetail("Exclusion", "exclusion", tripDetails, isEditing, handleInputChange)}
                 {renderDetail("Points to Note", "points_to_note", tripDetails, isEditing, handleInputChange)}
@@ -216,13 +221,13 @@ function Edittrips() {
                 </button>
               ) : null}
               {role !== 'Read-Only' && role !== 'User' && (
-              <button
-                onClick={handleEditToggle}
-                className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600"
-              >
-                {isEditing ? "Cancel Edit" : "Edit"}
-              </button>
-            )}
+                <button
+                  onClick={handleEditToggle}
+                  className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600"
+                >
+                  {isEditing ? "Cancel Edit" : "Edit"}
+                </button>
+              )}
 
             </div>
 
@@ -281,15 +286,15 @@ function Edittrips() {
                   Save
                 </button>
               ) : null}
-             {role !== 'Read-Only' && role !== 'User'&&(
-               <button
-               onClick={handleEditItineraryToggle}
-               className={`${isEditingItinerary ? "bg-red-500" : "bg-blue-500"
-                 } text-white px-4 py-2 rounded shadow hover:bg-opacity-75`}
-             >
-               {isEditingItinerary ? "Cancel" : "Edit Itinerary"}
-             </button>
-             )}
+              {role !== 'Read-Only' && role !== 'User' && (
+                <button
+                  onClick={handleEditItineraryToggle}
+                  className={`${isEditingItinerary ? "bg-red-500" : "bg-blue-500"
+                    } text-white px-4 py-2 rounded shadow hover:bg-opacity-75`}
+                >
+                  {isEditingItinerary ? "Cancel" : "Edit Itinerary"}
+                </button>
+              )}
             </div>
           </>
         )}
@@ -348,8 +353,50 @@ function Edittrips() {
         </div>
       </div>
       <div>
-      <h1 className="text-center font-extrabold  max-w-4xl mx-auto mt-8 text-2xl">CANCELATIONS</h1>
-
+        <h1 className="text-center font-extrabold  max-w-4xl mx-auto mt-8 text-2xl">CANCELATIONS</h1>
+        <div className="ml-8">
+          <label htmlFor="download-format" className="text-blue-700  ">Download as: </label>
+          <select
+            id="download-format"
+            onChange={(e) => handleDownload(e.target.value)}
+            className="border  border-2 border-gray-400"
+          >
+            <option value="">Select format</option>
+            <option value="VCF">VCF</option>
+            <option value="CSV">CSV</option>
+            <option value="Excel">Excel</option>
+          </select>
+        </div>
+        <div className="p-6">
+          <table className="min-w-full divide-y divide-gray-200 border border-gray-300">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Booking ID</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Order ID</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Full Name</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Phonenumber</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Reason</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Payment Id</th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+            {cancellations.map((item ) => (
+              <tr key={item.trip_id}>
+                  <td className="px-6 py-4 whitespace-nowrap">{item.booking_id}</td>
+                  <td className="px-6 py-4 whitespace-nowrap">{item.order_id}</td>
+                  <td className="px-6 py-4 whitespace-nowrap">{item.fullname}</td>
+                  <td className="px-6 py-4 whitespace-nowrap">{item.phonenumber}</td>
+                  <td className="px-6 py-4 whitespace-nowrap">{item.email}</td>
+                  <td className="px-6 py-4 whitespace-nowrap">{item.reason}</td>
+                  <td className="px-6 py-4 whitespace-nowrap">{item.amount}</td>
+                  <td className="px-6 py-4 whitespace-nowrap">{item.payment_id}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
 

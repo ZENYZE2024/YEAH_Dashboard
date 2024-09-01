@@ -70,10 +70,6 @@ const pool = mysql.createPool({
     database: process.env.DATABASE
 });
 
-async function insertImage(connection, trip_id, filePath, imageType) {
-    const insertImageSQL = `INSERT INTO images (trip_id, file_path, image_type) VALUES (?, ?, ?)`;
-    await connection.query(insertImageSQL, [trip_id, filePath, imageType]);
-}
 
 // async function updateAdditionalImages(connection, trip_id, additionalImagesData) {
 //     const updateImageSQL = `
@@ -247,15 +243,16 @@ app.get('/alltrips', async (req, res) => {
 });
 
 
+app.get('/edittrips/:trip_id', async (req, res) => {
 
-app.get('/edittrips', async (req, res) => {
-    const trip_id = req.query.trip_id;
+    const trip_id = req.params.trip_id; // Get trip_id from URL parameters
     if (!trip_id) {
         return res.status(400).json({ error: 'trip_id is required' });
     }
 
+    let connection;
     try {
-        const connection = await pool.getConnection();
+        connection = await pool.getConnection();
 
         const [rows] = await connection.query(
             `SELECT tripdata.*, images.file_path
@@ -265,8 +262,6 @@ app.get('/edittrips', async (req, res) => {
             [trip_id]
         );
 
-        connection.release();
-
         if (rows.length === 0) {
             return res.status(404).json({ error: 'Trip not found' });
         }
@@ -275,11 +270,14 @@ app.get('/edittrips', async (req, res) => {
     } catch (error) {
         console.error('Error fetching trip data:', error);
         res.status(500).json({ error: 'An error occurred while fetching trip data' });
+    } finally {
+        if (connection) connection.release(); // Ensure connection is released
     }
 });
 
-app.get('/tripitenary', async (req, res) => {
-    const trip_id = req.query.trip_id;
+
+app.get('/tripitenary/:trip_id', async (req, res) => {
+    const trip_id = req.params.trip_id;
     if (!trip_id) {
         return res.status(400).json({ error: 'trip_id is required' });
     }
@@ -390,101 +388,137 @@ app.put('/updatetinerary', async (req, res) => {
         res.status(500).json({ error: 'Database connection failed' });
     }
 });
+
 app.post('/addtrips', upload.any(), async (req, res) => {
-    console.log(req.body);
+    console.log('Request Body:', req.body);
     try {
         const {
             trip_name, trip_code, cost, seats, trip_start_date, end_date,
             trip_start_point, trip_end_point, destination, trip_duration,
             traveller_type, inclusion, exclusion, points_to_note, trip_type,
-            itinerary, trip_description, googlemap, whatsapplink
+            itinerary, trip_description, googlemap, whatsapplink, userId,additionalpickuppoint
         } = req.body;
 
-        // Set the same value for seats and totalseats
         const totalseats = seats;
-
         const slug = generateSlug(trip_name);
         const files = req.files || [];
 
-        let tripImagePath = null;
-        const additionalImages = [];
+        let tripImagePath = ''; // Changed from const to let
+        const additionalImages = {};
         const imagesMap = {};
 
         files.forEach(file => {
             const filePath = `uploads/${file.filename}`;
-            if (file.fieldname.includes('itinerary')) {
-                // Extract day index from fieldname
+            const fieldName = file.fieldname;
+
+            console.log(`Processing file: ${file.filename} with fieldname: ${fieldName}`);
+
+            if (fieldName.startsWith('trip_images')) {
+                const tripImageMatch = fieldName.match(/^trip_images\[(\d+)\]$/);
+                if (tripImageMatch) {
+                    tripImagePath = filePath;
+                    console.log(`Set tripImagePath to: ${filePath}`);
+                } else {
+                    console.warn(`Unexpected fieldname format for trip image: ${fieldName}`);
+                }
+            } else if (fieldName.startsWith('additional_images')) {
+                const imageMatch = fieldName.match(/^additional_images_(\d+)\[(\d+)\]$/);
+                if (imageMatch) {
+                    const imageIndex = parseInt(imageMatch[1], 10); // Convert to integer
+                    const adjustedIndex = imageIndex + 1; // Adjust index to start from 1
+                    additionalImages[`additional_image_${adjustedIndex}`] = filePath;
+                    console.log(`Added additional image ${adjustedIndex} with path: ${filePath}`);
+                } else {
+                    console.warn(`Invalid format for additional image: ${fieldName}`);
+                }
+            }
+            else if (file.fieldname.includes('itinerary')) {
                 const dayMatch = file.fieldname.match(/itinerary\[(\d+)\]/);
                 const dayIndex = dayMatch ? parseInt(dayMatch[1], 10) : null;
                 if (dayIndex !== null) {
-                    imagesMap[dayIndex] = filePath; // Map day index to image path
+                    imagesMap[dayIndex] = filePath;
                 }
+            } else if (file.fieldname.includes('additional_images')) {
+                additionalImages.push(filePath);
+            } else {
+                console.warn(`Unknown fieldname: ${fieldName}`);
             }
         });
-
-        console.log('Images Map:', imagesMap); // Ensure this contains all expected entries
-
 
         console.log('Trip Image Path:', tripImagePath);
         console.log('Additional Images:', additionalImages);
         console.log('Images Map:', imagesMap);
+
+
+
+
+        console.log('Images Map:', imagesMap);
+        console.log('Additional Images:', additionalImages);
 
         let connection;
         try {
             connection = await pool.getConnection();
             await connection.beginTransaction();
 
-            // Insert trip data
+            // Fetch user name
+            const [userResult] = await connection.query(
+                'SELECT name FROM tripusers WHERE id = ?',
+                [userId]
+            );
+            const userName = userResult[0]?.name;
+
+            if (!userName) {
+                throw new Error('User not found');
+            }
+
+            const createdAt = new Date();
+
+            // Insert trip details
             const insertTripSQL = `
                 INSERT INTO tripdata (
                     trip_name, trip_code, slug, cost, seats, totalseats, trip_start_date, end_date,
                     trip_start_point, trip_end_point, destination, trip_duration,
-                    traveller_type, inclusion, exclusion, points_to_note, trip_type, trip_description, googlemap, whatsapplink
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    traveller_type, inclusion, exclusion, points_to_note, trip_type, trip_description, googlemap, whatsapplink,
+                    created_by, created_at,additionalpickuppoint
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?)
             `;
             const tripValues = [
                 trip_name, trip_code, slug, cost, seats, totalseats, trip_start_date, end_date,
                 trip_start_point, trip_end_point, destination, trip_duration,
-                traveller_type, inclusion, exclusion, points_to_note, trip_type, trip_description, googlemap, whatsapplink
+                traveller_type, inclusion, exclusion, points_to_note, trip_type, trip_description, googlemap, whatsapplink,
+                userName, createdAt,additionalpickuppoint
             ];
 
-            console.log('Inserting Trip Values:', tripValues); // Log trip values
+            console.log('Inserting Trip Values:', tripValues);
 
             const [result] = await connection.query(insertTripSQL, tripValues);
             const trip_id = result.insertId;
 
             console.log('Inserted Trip ID:', trip_id);
 
-            // Insert trip image into images table
+            // Insert trip image
             if (tripImagePath) {
                 await insertImage(connection, trip_id, tripImagePath, 'trip_image');
             }
 
-            // Prepare additional images data
-            const additionalImagesData = {};
-            additionalImages.forEach((imagePath, index) => {
-                additionalImagesData[`additional_image_${index + 1}`] = imagePath;
-            });
+            // Update additional images
+            await updateAdditionalImages(connection, trip_id, additionalImages);
 
-            // Update additional images into images table
-            await updateAdditionalImages(connection, trip_id, additionalImagesData);
-
-            // Ensure itinerary is an array of objects
+            // Process itinerary
             const itineraryData = Array.isArray(itinerary) ? itinerary : JSON.parse(itinerary);
             console.log('Itinerary Data:', itineraryData);
 
-            // Insert itinerary data
             const insertItinerarySQL = `
-    INSERT INTO tripitenary (
-        TRIP_NAME, TRIP_CODE, TRIP_ID, DAY, DATE, DAY_TITLE, DAY_DESCRIPTION, DAY_IMG
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-`;
+                INSERT INTO tripitenary (
+                    TRIP_NAME, TRIP_CODE, TRIP_ID, DAY, DATE, DAY_TITLE, DAY_DESCRIPTION, DAY_IMG
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            `;
 
             for (const day of itineraryData) {
-                const dayIndex = parseInt(day.DAY.replace('Day ', ''), 10) - 1; // Adjust index to zero-based
+                const dayIndex = parseInt(day.DAY.replace('Day ', ''), 10) - 1;
                 const itineraryValues = [
                     trip_name, trip_code, trip_id, dayIndex + 1, day.DATE, day.DAY_TITLE, day.DAY_DESCRIPTION,
-                    imagesMap[dayIndex] || null // Adjust index to match imagesMap
+                    imagesMap[dayIndex] || null
                 ];
                 console.log('Inserting Itinerary Values:', itineraryValues);
 
@@ -494,7 +528,6 @@ app.post('/addtrips', upload.any(), async (req, res) => {
                     console.error(`Error inserting itinerary data for day ${dayIndex + 1}:`, err);
                 }
             }
-
 
             await connection.commit();
             res.json({ message: 'Trip and itinerary data inserted successfully!' });
@@ -513,14 +546,9 @@ app.post('/addtrips', upload.any(), async (req, res) => {
 
 // Helper function to insert image
 async function insertImage(connection, trip_id, filePath, imageType) {
-    const insertImageSQL = `
-        INSERT INTO images (trip_id, file_path, image_type)
-        VALUES (?, ?, ?)
-        ON DUPLICATE KEY UPDATE file_path = VALUES(file_path), image_type = VALUES(image_type)
-    `;
+    const insertImageSQL = `INSERT INTO images (trip_id, file_path, image_type) VALUES (?, ?, ?)`;
     await connection.query(insertImageSQL, [trip_id, filePath, imageType]);
 }
-
 
 // Helper function to update additional images
 async function updateAdditionalImages(connection, trip_id, additionalImagesData) {
@@ -539,7 +567,16 @@ async function updateAdditionalImages(connection, trip_id, additionalImagesData)
         additionalImagesData['additional_image_4'] || null,
         trip_id
     ];
-    await connection.query(updateImageSQL, additionalImagesArray);
+
+    console.log('Update Additional Images SQL:', updateImageSQL);
+    console.log('Update Additional Images Params:', additionalImagesArray);
+
+    try {
+        await connection.query(updateImageSQL, additionalImagesArray);
+    } catch (err) {
+        console.error('Error updating additional images:', err);
+        throw err;
+    }
 }
 
 
@@ -588,8 +625,8 @@ app.put('/deletetrips/:trip_id', async (req, res) => {
 
 
 
-app.get('/getbookingdetails', async (req, res) => {
-    const trip_id = req.query.trip_id;
+app.get('/getbookingdetails/:trip_id', async (req, res) => {
+    const trip_id = req.params.trip_id;
     if (!trip_id) {
         return res.status(400).json({ message: 'Trip ID is required' });
     }
@@ -607,6 +644,28 @@ app.get('/getbookingdetails', async (req, res) => {
         res.status(500).json({ error: 'Database connection failed' });
     }
 })
+app.get('/cancellations/:trip_id', async (req, res) => {
+    const trip_id = req.params.trip_id
+
+    if (!trip_id) {
+        return res.status(400).json({ message: 'Trip ID is required' });
+    }
+
+    try {
+        const connection = await pool.getConnection();
+        const [rows] = await connection.query(`
+            SELECT * FROM cancellations WHERE trip_id = ?
+           `, [trip_id]);
+
+       connection.release();
+       res.json(rows);
+    } catch (error) {
+        console.error('Error connecting to the database:', err);
+        res.status(500).json({ error: 'Database connection failed' }); 
+    }
+})
+
+
 app.get('/supervisordashboard', async (req, res) => {
     const { user_id } = req.query;
     try {
