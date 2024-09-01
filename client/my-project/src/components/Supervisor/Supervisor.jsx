@@ -38,7 +38,7 @@ function Supervisor() {
 
     try {
       const payload = JSON.parse(atob(token.split('.')[1]));
-      return payload.userId; // Adjust if your token uses a different key
+      return payload.userId;
     } catch (e) {
       console.error('Error decoding token:', e);
       return null;
@@ -50,11 +50,13 @@ function Supervisor() {
   };
 
   const handleLogout = () => {
-    // Remove token and role from local storage
     localStorage.removeItem('accessToken');
     localStorage.removeItem('role');
-    // Navigate to home page and replace the history entry
     navigate('/', { replace: true });
+  };
+
+  const handleAddTripsClick = () => {
+    navigate('/addtrips');
   };
 
   if (loading) return <p className="text-center text-lg text-gray-600">Loading...</p>;
@@ -63,12 +65,20 @@ function Supervisor() {
     <div className="bg-gradient-to-br from-[#ffede8] via-[#FFFFFF] to-[#FFFFFF] min-h-screen flex flex-col items-center py-8">
       <div className="bg-white w-full max-w-screen-xl p-6 rounded-lg shadow-lg mb-6 flex justify-between items-center">
         <h1 className="text-2xl font-bold text-gray-800">Supervised Trips</h1>
-        <button
-          className="bg-gradient-to-r from-red-500 to-red-700 text-white py-2 px-4 rounded-lg shadow-lg hover:from-red-600 hover:to-red-800 focus:outline-none focus:ring-2 focus:ring-red-300 transition duration-300"
-          onClick={handleLogout}
-        >
-          Logout
-        </button>
+        <div className="flex space-x-4">
+          <button
+            className="bg-gradient-to-r from-blue-500 to-blue-700 text-white py-2 px-4 rounded-lg shadow-lg hover:from-blue-600 hover:to-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-300 transition duration-300"
+            onClick={handleAddTripsClick}
+          >
+            Add Trips
+          </button>
+          <button
+            className="bg-gradient-to-r from-red-500 to-red-700 text-white py-2 px-4 rounded-lg shadow-lg hover:from-red-600 hover:to-red-800 focus:outline-none focus:ring-2 focus:ring-red-300 transition duration-300"
+            onClick={handleLogout}
+          >
+            Logout
+          </button>
+        </div>
       </div>
       <div className="bg-white w-full max-w-screen-xl p-6 rounded-lg shadow-lg">
         {error ? (

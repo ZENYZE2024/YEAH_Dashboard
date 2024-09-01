@@ -158,8 +158,7 @@ function Edittrips() {
   if (loading) return <p className="text-center text-lg">Loading...</p>;
   if (error) return <p className="text-center text-lg text-red-500">Error: {error}</p>;
 
-  const imageUrl = tripDetails?.file_path ? `https://betayeah.yeahtrips.in{tripDetails.file_path.replace(/\\/g, '/')}` : '';
-
+  
 
 
   return (
@@ -181,25 +180,7 @@ function Edittrips() {
               )}
             </h1>
 
-            {imageUrl && (
-              <div className="mb-6">
-                {isEditing ? (
-                  <input
-                    type="text"
-                    name="file_path"
-                    value={tripDetails.file_path}
-                    onChange={handleInputChange}
-                    className="border rounded w-full p-2 mb-2"
-                  />
-                ) : (
-                  <img
-                    src={imageUrl}
-                    alt="Trip"
-                    className="w-full h-auto max-h-80 object-cover rounded"
-                  />
-                )}
-              </div>
-            )}
+           
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
               <div className="space-y-2">

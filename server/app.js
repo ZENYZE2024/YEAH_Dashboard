@@ -17,19 +17,35 @@ app.use(express.json());
 app.use(bodyParser.json({ limit: '50mb' }));
 app.use(bodyParser.urlencoded({ limit: '50mb', extended: true }));
 
-// Configure Multer storage
+
+const uploadDir = 'uploads/';
+if (!fs.existsSync(uploadDir)) {
+    fs.mkdirSync(uploadDir);
+}
+
 const storage = multer.diskStorage({
-    destination: function (req, file, cb) {
-        const uploadDir = path.join(__dirname, './uploads');
-        if (!fs.existsSync(uploadDir)) {
-            fs.mkdirSync(uploadDir);
-        }
+    destination: (req, file, cb) => {
         cb(null, uploadDir);
     },
-    filename: function (req, file, cb) {
-        cb(null, `${Date.now()}_${file.originalname}`);
+    filename: (req, file, cb) => {
+        const fileName = Date.now() + path.extname(file.originalname);
+        cb(null, fileName);
     }
 });
+
+const upload = multer({
+    storage: storage,
+    fileFilter: (req, file, cb) => {
+        if (file.mimetype === 'image/jpeg' || file.mimetype === 'image/png') {
+            cb(null, true);
+        } else {
+            cb(new Error('Unsupported file type'), false);
+        }
+    }
+});
+
+
+
 const generateSlug = (text) => {
     return text
         .toString()
@@ -41,7 +57,7 @@ const generateSlug = (text) => {
         .replace(/-+$/, '')
         .concat('_trips');
 };
-const upload = multer({ storage: storage });
+
 
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
@@ -53,6 +69,36 @@ const pool = mysql.createPool({
     password: process.env.PASSWORD,
     database: process.env.DATABASE
 });
+
+async function insertImage(connection, trip_id, filePath, imageType) {
+    const insertImageSQL = `INSERT INTO images (trip_id, file_path, image_type) VALUES (?, ?, ?)`;
+    await connection.query(insertImageSQL, [trip_id, filePath, imageType]);
+}
+
+// async function updateAdditionalImages(connection, trip_id, additionalImagesData) {
+//     const updateImageSQL = `
+//         UPDATE images
+//         SET additional_image_1 = ?,
+//             additional_image_2 = ?,
+//             additional_image_3 = ?,
+//             additional_image_4 = ?
+//         WHERE trip_id = ?
+//     `;
+//     const additionalImagesArray = [
+//         additionalImagesData['additional_image_1'] || null,
+//         additionalImagesData['additional_image_2'] || null,
+//         additionalImagesData['additional_image_3'] || null,
+//         additionalImagesData['additional_image_4'] || null,
+//         trip_id
+//     ];
+//     await connection.query(updateImageSQL, additionalImagesArray);
+// }
+
+
+// Check if the image already exists before inserting
+
+
+
 
 // const authenticateRole = (requiredRole) => {
 //     return async (req, res, next) => {
@@ -193,7 +239,6 @@ app.get('/alltrips', async (req, res) => {
         `, [status]);
 
         connection.release();
-
         res.json(rows);
     } catch (error) {
         console.error('Error fetching data and images from database:', error);
@@ -345,73 +390,173 @@ app.put('/updatetinerary', async (req, res) => {
         res.status(500).json({ error: 'Database connection failed' });
     }
 });
-
-
-
-app.post('/addtrips', upload.single('image'), async (req, res) => {
-    const {
-        trip_name, trip_code, cost, seats, trip_start_date, end_date,
-        trip_start_point, trip_end_point, destination, trip_duration,
-        traveller_type, inclusion, exclusion, points_to_note, trip_type, days
-    } = req.body;
-
-    const slug = generateSlug(trip_name);
-    const file_path = req.file ? `/uploads/${req.file.filename}` : null;
-
-    let connection;
+app.post('/addtrips', upload.any(), async (req, res) => {
+    console.log(req.body);
     try {
-        connection = await pool.getConnection();
-        await connection.beginTransaction();
-
-        // Insert trip data
-        const insertTripSQL = `
-            INSERT INTO tripdata (
-                trip_name, trip_code, slug, cost, seats, trip_start_date, end_date,
-                trip_start_point, trip_end_point, destination, trip_duration,
-                traveller_type, inclusion, exclusion, points_to_note, trip_type
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        `;
-        const tripValues = [
-            trip_name, trip_code, slug, cost, seats, trip_start_date, end_date,
+        const {
+            trip_name, trip_code, cost, seats, trip_start_date, end_date,
             trip_start_point, trip_end_point, destination, trip_duration,
-            traveller_type, inclusion, exclusion, points_to_note, trip_type
-        ];
-        const [result] = await connection.query(insertTripSQL, tripValues);
-        const trip_id = result.insertId;
+            traveller_type, inclusion, exclusion, points_to_note, trip_type,
+            itinerary, trip_description, googlemap, whatsapplink
+        } = req.body;
 
-        // Insert itinerary data
-        const insertItinerarySQL = `
-            INSERT INTO tripitenary (
-                TRIP_NAME, TRIP_CODE, TRIP_ID, DAY, DATE, DAY_TITLE, DAY_DESCRIPTION
-            ) VALUES (?, ?, ?, ?, ?, ?, ?)
-        `;
-        for (const day of JSON.parse(days)) {
-            const itineraryValues = [
-                trip_name, trip_code, trip_id, day.DAY, day.DATE, day.DAY_TITLE, day.DAY_DESCRIPTION
-            ];
-            await connection.query(insertItinerarySQL, itineraryValues);
-        }
+        // Set the same value for seats and totalseats
+        const totalseats = seats;
 
-        // Insert image data
-        if (file_path) {
-            const insertImageSQL = `
-                INSERT INTO images (
-                    trip_id, file_path
-                ) VALUES (?, ?)
+        const slug = generateSlug(trip_name);
+        const files = req.files || [];
+
+        let tripImagePath = null;
+        const additionalImages = [];
+        const imagesMap = {};
+
+        files.forEach(file => {
+            const filePath = `uploads/${file.filename}`;
+            if (file.fieldname.includes('itinerary')) {
+                // Extract day index from fieldname
+                const dayMatch = file.fieldname.match(/itinerary\[(\d+)\]/);
+                const dayIndex = dayMatch ? parseInt(dayMatch[1], 10) : null;
+                if (dayIndex !== null) {
+                    imagesMap[dayIndex] = filePath; // Map day index to image path
+                }
+            }
+        });
+
+        console.log('Images Map:', imagesMap); // Ensure this contains all expected entries
+
+
+        console.log('Trip Image Path:', tripImagePath);
+        console.log('Additional Images:', additionalImages);
+        console.log('Images Map:', imagesMap);
+
+        let connection;
+        try {
+            connection = await pool.getConnection();
+            await connection.beginTransaction();
+
+            // Insert trip data
+            const insertTripSQL = `
+                INSERT INTO tripdata (
+                    trip_name, trip_code, slug, cost, seats, totalseats, trip_start_date, end_date,
+                    trip_start_point, trip_end_point, destination, trip_duration,
+                    traveller_type, inclusion, exclusion, points_to_note, trip_type, trip_description, googlemap, whatsapplink
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             `;
-            await connection.query(insertImageSQL, [trip_id, file_path]);
-        }
+            const tripValues = [
+                trip_name, trip_code, slug, cost, seats, totalseats, trip_start_date, end_date,
+                trip_start_point, trip_end_point, destination, trip_duration,
+                traveller_type, inclusion, exclusion, points_to_note, trip_type, trip_description, googlemap, whatsapplink
+            ];
 
-        await connection.commit();
-        res.json({ message: 'Trip and itinerary data inserted successfully!' });
+            console.log('Inserting Trip Values:', tripValues); // Log trip values
+
+            const [result] = await connection.query(insertTripSQL, tripValues);
+            const trip_id = result.insertId;
+
+            console.log('Inserted Trip ID:', trip_id);
+
+            // Insert trip image into images table
+            if (tripImagePath) {
+                await insertImage(connection, trip_id, tripImagePath, 'trip_image');
+            }
+
+            // Prepare additional images data
+            const additionalImagesData = {};
+            additionalImages.forEach((imagePath, index) => {
+                additionalImagesData[`additional_image_${index + 1}`] = imagePath;
+            });
+
+            // Update additional images into images table
+            await updateAdditionalImages(connection, trip_id, additionalImagesData);
+
+            // Ensure itinerary is an array of objects
+            const itineraryData = Array.isArray(itinerary) ? itinerary : JSON.parse(itinerary);
+            console.log('Itinerary Data:', itineraryData);
+
+            // Insert itinerary data
+            const insertItinerarySQL = `
+    INSERT INTO tripitenary (
+        TRIP_NAME, TRIP_CODE, TRIP_ID, DAY, DATE, DAY_TITLE, DAY_DESCRIPTION, DAY_IMG
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+`;
+
+            for (const day of itineraryData) {
+                const dayIndex = parseInt(day.DAY.replace('Day ', ''), 10) - 1; // Adjust index to zero-based
+                const itineraryValues = [
+                    trip_name, trip_code, trip_id, dayIndex + 1, day.DATE, day.DAY_TITLE, day.DAY_DESCRIPTION,
+                    imagesMap[dayIndex] || null // Adjust index to match imagesMap
+                ];
+                console.log('Inserting Itinerary Values:', itineraryValues);
+
+                try {
+                    await connection.query(insertItinerarySQL, itineraryValues);
+                } catch (err) {
+                    console.error(`Error inserting itinerary data for day ${dayIndex + 1}:`, err);
+                }
+            }
+
+
+            await connection.commit();
+            res.json({ message: 'Trip and itinerary data inserted successfully!' });
+        } catch (error) {
+            if (connection) await connection.rollback();
+            console.error('Error inserting trip data:', error);
+            res.status(500).json({ error: 'Failed to insert trip data' });
+        } finally {
+            if (connection) connection.release();
+        }
     } catch (error) {
-        if (connection) await connection.rollback();
-        console.error('Error inserting trip data:', error);
-        res.status(500).json({ error: 'Failed to insert trip data' });
-    } finally {
-        if (connection) connection.release();
+        console.error('Error handling request:', error);
+        res.status(500).json({ error: 'Internal server error' });
     }
 });
+
+// Helper function to insert image
+async function insertImage(connection, trip_id, filePath, imageType) {
+    const insertImageSQL = `
+        INSERT INTO images (trip_id, file_path, image_type)
+        VALUES (?, ?, ?)
+        ON DUPLICATE KEY UPDATE file_path = VALUES(file_path), image_type = VALUES(image_type)
+    `;
+    await connection.query(insertImageSQL, [trip_id, filePath, imageType]);
+}
+
+
+// Helper function to update additional images
+async function updateAdditionalImages(connection, trip_id, additionalImagesData) {
+    const updateImageSQL = `
+        UPDATE images
+        SET additional_image_1 = ?,
+            additional_image_2 = ?,
+            additional_image_3 = ?,
+            additional_image_4 = ?
+        WHERE trip_id = ?
+    `;
+    const additionalImagesArray = [
+        additionalImagesData['additional_image_1'] || null,
+        additionalImagesData['additional_image_2'] || null,
+        additionalImagesData['additional_image_3'] || null,
+        additionalImagesData['additional_image_4'] || null,
+        trip_id
+    ];
+    await connection.query(updateImageSQL, additionalImagesArray);
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 app.put('/deletetrips/:trip_id', async (req, res) => {
