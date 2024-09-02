@@ -28,7 +28,7 @@ function Trips() {
   }, [view]);
 
   const handleEdit = (trip_id) => {
-    navigate(`/edittrips/${trip_id}`);
+    navigate(`/${trip_id}`);
   };
 
   const handleDelete = async (trip_id) => {

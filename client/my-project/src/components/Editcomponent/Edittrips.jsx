@@ -19,15 +19,15 @@ function Edittrips() {
   useEffect(() => {
     const fetchData = async () => {
 
-   console.log(trip_id)
+      console.log(trip_id)
       const storedRole = localStorage.getItem('role');
       setRole(storedRole);
 
       try {
         const [detailsResponse, itineraryResponse, bookingsResponse, cancellationsresponse] = await Promise.all([
           axios.get(`https://admin.yeahtrips.in/editdetailstrips/${trip_id}`),
-           
-          axios.get(`https://admin.yeahtrips.in/tripitenary/${trip_id}` ),
+
+          axios.get(`https://admin.yeahtrips.in/tripitenary/${trip_id}`),
           axios.get(`https://admin.yeahtrips.in/getbookingdetails/${trip_id}`),
           axios.get(`https://admin.yeahtrips.in/cancellations/${trip_id}`)
         ]);
@@ -189,6 +189,7 @@ function Edittrips() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
               <div className="space-y-2">
+                {renderDetail("trip_description", "trip_description", tripDetails, isEditing, handleInputChange)}
                 {renderDetail("Trip Code", "trip_code", tripDetails, isEditing, handleInputChange)}
                 {renderDetail("Slug", "slug", tripDetails, isEditing, handleInputChange)}
                 {renderDetail("Cost", "cost", tripDetails, isEditing, handleInputChange)}
@@ -199,6 +200,7 @@ function Edittrips() {
                 {renderDetail("End Point", "trip_end_point", tripDetails, isEditing, handleInputChange)}
                 {renderDetail("Destination", "destination", tripDetails, isEditing, handleInputChange)}
                 {renderDetail("Duration", "trip_duration", tripDetails, isEditing, handleInputChange)}
+                {renderDetail("whatsapplink", "whatsapplink", tripDetails, isEditing, handleInputChange)}
               </div>
               <div className="space-y-2">
                 {renderDetail("Traveller Type", "traveller_type", tripDetails, isEditing, handleInputChange)}
@@ -236,7 +238,7 @@ function Edittrips() {
             <h2 className="text-2xl font-bold text-gray-800 mb-4">Trip Itinerary</h2>
 
             <div className="space-y-4">
-              { tripItinerary.map((item, index) => (<div key={index} className="bg-gray-100 p-4 rounded-md shadow-sm">
+              {tripItinerary.map((item, index) => (<div key={index} className="bg-gray-100 p-4 rounded-md shadow-sm">
                 {isEditingItinerary ? (
                   <div className="space-y-2">
                     <div className="flex items-center space-x-2 mb-2">

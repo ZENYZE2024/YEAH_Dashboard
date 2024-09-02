@@ -24,7 +24,7 @@ function Addtripdetails() {
         trip_description: '',
         googlemap: '',
         whatsapplink: '',
-        additionalpickuppoint:''
+        additionalpickuppoint: ''
 
     });
 
@@ -32,6 +32,8 @@ function Addtripdetails() {
     const [tripImages, setTripImages] = useState([]);
     const [additionalImages, setAdditionalImages] = useState([]);
     const [additionalImageInputs, setAdditionalImageInputs] = useState([{ id: Date.now() }]);
+    const [coordinators, setCoordinators] = useState([{ name: '', role: '', email: '',cordinator_id :'', image: null }]);
+
 
     useEffect(() => {
         if (formData.trip_start_date && formData.end_date) {
@@ -93,6 +95,20 @@ function Addtripdetails() {
                 form.append(`additional_images_${index}[${i}]`, file);
             });
         });
+
+        coordinators.forEach((coordinator, i) => {
+            form.append(`coordinators[${i}][name]`, coordinator.name);
+            form.append(`coordinators[${i}][role]`, coordinator.role);
+            form.append(`coordinators[${i}][email]`, coordinator.email);
+            form.append(`coordinators[${i}][cordinator_id]`, coordinator.cordinator_id);
+
+            if (coordinator.image) {
+                form.append(`coordinators[${i}][image]`, coordinator.image);
+            }
+        });
+
+
+
         const token = localStorage.getItem('accessToken');
         const { userId } = JSON.parse(atob(token.split('.')[1]));
         form.append('userId', userId);
@@ -157,6 +173,29 @@ function Addtripdetails() {
     const handleAddAdditionalImages = () => {
         setAdditionalImageInputs([...additionalImageInputs, { id: Date.now() }]);
         setAdditionalImages([...additionalImages, []]);
+    };
+
+    const handleCoordinatorChange = (index, e) => {
+        const { name, value } = e.target;
+        const updatedCoordinators = [...coordinators];
+        updatedCoordinators[index][name] = value;
+        setCoordinators(updatedCoordinators);
+    };
+
+    const handleCoordinatorFileChange = (index, e) => {
+        const file = e.target.files[0];
+        const updatedCoordinators = [...coordinators];
+        updatedCoordinators[index].image = file;
+        setCoordinators(updatedCoordinators);
+    };
+
+    const addCoordinator = () => {
+        setCoordinators([...coordinators, { name: '', role: '', email: '', image: null,cordinator_id:'' }]);
+    };
+
+    const removeCoordinator = (index) => {
+        const updatedCoordinators = coordinators.filter((_, i) => i !== index);
+        setCoordinators(updatedCoordinators);
     };
 
     return (
@@ -441,6 +480,86 @@ function Addtripdetails() {
                         Add More Itinerary Days
                     </button>
                 </div>
+                <h3 className="text-2xl font-bold mb-4">Coordinators</h3>
+                {coordinators.map((coordinator, index) => (
+                    <div key={index} className="border p-4 rounded-lg mb-4 bg-white shadow-md">
+                        <div className="mb-4">
+                            <label htmlFor={`coordinatorName${index}`} className="block text-sm font-medium text-gray-700">Name:</label>
+                            <input
+                                type="text"
+                                id={`coordinatorName${index}`}
+                                name="name"
+                                value={coordinator.name}
+                                onChange={(e) => handleCoordinatorChange(index, e)}
+                                required
+                                className="border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 p-2"
+                            />
+                        </div>
+                        <div className="mb-4">
+                            <label htmlFor={`coordinatorRole${index}`} className="block text-sm font-medium text-gray-700">Role:</label>
+                            <input
+                                type="text"
+                                id={`coordinatorRole${index}`}
+                                name="role"
+                                value={coordinator.role}
+                                onChange={(e) => handleCoordinatorChange(index, e)}
+                                required
+                                className="border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 p-2"
+                            />
+                        </div>
+                        <div className="mb-4">
+                            <label htmlFor={`cordinator_id${index}`} className="block text-sm font-medium text-gray-700">id:</label>
+                            <input
+                                type="text"
+                                id={`cordinator_id${index}`}
+                                name="cordinator_id"
+                                value={coordinator.cordinator_id}
+                                onChange={(e) => handleCoordinatorChange(index, e)}
+                                required
+                                className="border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 p-2"
+                            />
+                        </div>
+                        <div className="mb-4">
+                            <label htmlFor={`coordinatorEmail${index}`} className="block text-sm font-medium text-gray-700">Email:</label>
+                            <input
+                                type="email"
+                                id={`coordinatorEmail${index}`}
+                                name="email"
+                                value={coordinator.email}
+                                onChange={(e) => handleCoordinatorChange(index, e)}
+                                required
+                                className="border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 p-2"
+                            />
+                        </div>
+                        <div className="mb-4">
+                            <label htmlFor={`coordinatorImage${index}`} className="block text-sm font-medium text-gray-700">Coordinator Image:</label>
+                            <input
+                                type="file"
+                                id={`coordinatorImage${index}`}
+                                name="image"
+                                accept="image/*"
+                                onChange={(e) => handleCoordinatorFileChange(index, e)}
+                                className="mt-1 block w-full text-gray-500"
+                            />
+                        </div>
+                        <button
+                            type="button"
+                            onClick={() => removeCoordinator(index)}
+                            className="mt-4 inline-flex items-center px-4 py-2 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                        >
+                            Remove Coordinator
+                        </button>
+                    </div>
+                ))}
+                <button
+                    type="button"
+                    onClick={addCoordinator}
+                    className="mt-4 inline-flex items-center px-4 py-2 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+                >
+                    Add Coordinator
+                </button>
+
+
                 <div>
                     <button
                         type="submit"

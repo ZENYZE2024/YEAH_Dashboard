@@ -18,7 +18,7 @@ function App(){
               <div>
                      <Routes>
                             <Route path="/" exact element={<Login/>}/>
-                            <Route  path="/edittrips/:trip_id" exact element ={<Edittrips/>}/>
+                            <Route  path="/:trip_id" exact element ={<Edittrips/>}/>
                             <Route path="/addtrips" exact element={<Addtripdetails/>}/>
                             <Route path="/adduser" exact element={<Adduser/>}/>
                             <Route path="/Dashboard"  exact element={<Dashhboard/>}/>
