@@ -25,20 +25,23 @@ function Edittrips() {
 
       try {
         const [detailsResponse, itineraryResponse, bookingsResponse,cancellationsresponse] = await Promise.all([
-          axios.get(`https://admin.yeahtrips.in/edittrips/${trip_id}`),
-          axios.get(`https://admin.yeahtrips.in/tripitenary/${trip_id}`, {
+          axios.get(`http://admin.yeahtrips.in/edittrips/${trip_id}`),
+          axios.get(`http://admin.yeahtrips.in/tripitenary/${trip_id}`, {
 
           }),
-          axios.get(`https://admin.yeahtrips.in/getbookingdetails/${trip_id}`, {
+          axios.get(`http://admin.yeahtrips.in/getbookingdetails/${trip_id}`, {
 
           }),
-          axios.get(`https://admin.yeahtrips.in/cancellations/${trip_id}`)
+          axios.get(`http://admin.yeahtrips.in/cancellations/${trip_id}`)
         ]);
 
         setTripDetails(detailsResponse.data[0]);
-        setTripItinerary(itineraryResponse.data);
-        setBookings(bookingsResponse.data);
+        setTripItinerary(Array.isArray(itineraryResponse.data)?itineraryResponse.data:[]);
+        setBookings(Array.isArray(bookingsResponse.data)?bookingsResponse.data:[]);
         setCancellations(Array.isArray(cancellationsresponse.data) ? cancellationsresponse.data : []);
+        console.log("Trip Details:", detailsResponse.data);
+      console.log("Trip Itinerary:", tripItinerary);
+      console.log("Bookings:", bookings);
         console.log("cancellation",cancellations)
 
       } catch (error) {
@@ -236,8 +239,7 @@ function Edittrips() {
             <h2 className="text-2xl font-bold text-gray-800 mb-4">Trip Itinerary</h2>
 
             <div className="space-y-4">
-              {tripItinerary.map((item, index) => (
-                <div key={index} className="bg-gray-100 p-4 rounded-md shadow-sm">
+            {Array.isArray(tripItinerary) && tripItinerary.map((item, index) => (                <div key={index} className="bg-gray-100 p-4 rounded-md shadow-sm">
                   {isEditingItinerary ? (
                     <div className="space-y-2">
                       <div className="flex items-center space-x-2 mb-2">
@@ -335,8 +337,7 @@ function Edittrips() {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {bookings.map((item) => (
-                <tr key={item.trip_id}>
+            {Array.isArray(bookings) && bookings.map((booking, index) => (                <tr key={item.trip_id}>
                   <td className="px-6 py-4 whitespace-nowrap">{item.booking_id}</td>
                   <td className="px-6 py-4 whitespace-nowrap">{item.order_id}</td>
                   <td className="px-6 py-4 whitespace-nowrap">{item.fullname}</td>

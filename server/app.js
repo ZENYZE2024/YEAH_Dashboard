@@ -245,7 +245,8 @@ app.get('/alltrips', async (req, res) => {
 
 app.get('/edittrips/:trip_id', async (req, res) => {
 
-    const trip_id = req.params.trip_id; // Get trip_id from URL parameters
+    const trip_id = req.params.trip_id; 
+    console.log(req.params)
     if (!trip_id) {
         return res.status(400).json({ error: 'trip_id is required' });
     }
