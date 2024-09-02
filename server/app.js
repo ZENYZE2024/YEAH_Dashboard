@@ -242,10 +242,8 @@ app.get('/alltrips', async (req, res) => {
     }
 });
 
-
 app.get('/editdetailstrips', async (req, res) => {
     const trip_id = req.query.trip_id;
-
 
     if (!trip_id) {
         return res.status(400).json({ error: 'trip_id is required' });
@@ -267,7 +265,7 @@ app.get('/editdetailstrips', async (req, res) => {
             return res.status(404).json({ error: 'Trip not found' });
         }
 
-        res.json(rows);
+        res.json(rows); // Sends JSON response
     } catch (error) {
         console.error('Error fetching trip data:', error);
         res.status(500).json({ error: 'An internal server error occurred' });
@@ -275,6 +273,7 @@ app.get('/editdetailstrips', async (req, res) => {
         if (connection) connection.release(); // Ensure connection is released
     }
 });
+
 
 
 
