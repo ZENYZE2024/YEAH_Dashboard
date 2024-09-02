@@ -24,25 +24,25 @@ function Edittrips() {
       setRole(storedRole);
 
       try {
-        const [detailsResponse, itineraryResponse, bookingsResponse,cancellationsresponse] = await Promise.all([
-          axios.get(`http://admin.yeahtrips.in/edittrips/${trip_id}`),
-          axios.get(`http://admin.yeahtrips.in/tripitenary/${trip_id}`, {
+        const [detailsResponse, itineraryResponse, bookingsResponse, cancellationsresponse] = await Promise.all([
+          axios.get(`https://admin.yeahtrips.in/editdetailstrips/${trip_id}`),
+          axios.get(`https://admin.yeahtrips.in/tripitenary/${trip_id}`, {
 
           }),
-          axios.get(`http://admin.yeahtrips.in/getbookingdetails/${trip_id}`, {
+          axios.get(`https://admin.yeahtrips.in/getbookingdetails/${trip_id}`, {
 
           }),
-          axios.get(`http://admin.yeahtrips.in/cancellations/${trip_id}`)
+          axios.get(`https://admin.yeahtrips.in/cancellations/${trip_id}`)
         ]);
 
         setTripDetails(detailsResponse.data[0]);
-        setTripItinerary(Array.isArray(itineraryResponse.data)?itineraryResponse.data:[]);
-        setBookings(Array.isArray(bookingsResponse.data)?bookingsResponse.data:[]);
+        setTripItinerary(Array.isArray(itineraryResponse.data) ? itineraryResponse.data : []);
+        setBookings(Array.isArray(bookingsResponse.data) ? bookingsResponse.data : []);
         setCancellations(Array.isArray(cancellationsresponse.data) ? cancellationsresponse.data : []);
-        console.log("Trip Details:", detailsResponse.data);
-      console.log("Trip Itinerary:", tripItinerary);
-      console.log("Bookings:", bookings);
-        console.log("cancellation",cancellations)
+        console.log("Trip Details:", detailsResponse);
+        console.log("Trip Itinerary:", tripItinerary);
+        console.log("Bookings:", bookings);
+        console.log("cancellation", cancellations)
 
       } catch (error) {
         console.error("Error fetching trip details or itinerary:", error);
@@ -239,43 +239,43 @@ function Edittrips() {
             <h2 className="text-2xl font-bold text-gray-800 mb-4">Trip Itinerary</h2>
 
             <div className="space-y-4">
-            {Array.isArray(tripItinerary) && tripItinerary.map((item, index) => (                <div key={index} className="bg-gray-100 p-4 rounded-md shadow-sm">
-                  {isEditingItinerary ? (
-                    <div className="space-y-2">
-                      <div className="flex items-center space-x-2 mb-2">
-                        <label className="text-gray-600">Date:</label>
-                        <input
-                          type="text"
-                          name="DATE"
-                          value={item.DATE || ''}
-                          onChange={(e) => handleItineraryChange(index, e)}
-                          className="border rounded w-32 p-2"
-                        />
-                      </div>
+              { tripItinerary.map((item, index) => (<div key={index} className="bg-gray-100 p-4 rounded-md shadow-sm">
+                {isEditingItinerary ? (
+                  <div className="space-y-2">
+                    <div className="flex items-center space-x-2 mb-2">
+                      <label className="text-gray-600">Date:</label>
                       <input
                         type="text"
-                        name="DAY_TITLE"
-                        value={item.DAY_TITLE}
+                        name="DATE"
+                        value={item.DATE || ''}
                         onChange={(e) => handleItineraryChange(index, e)}
-                        className="border rounded w-full p-2"
-                        placeholder="Day Title"
-                      />
-                      <textarea
-                        name="DAY_DESCRIPTION"
-                        value={item.DAY_DESCRIPTION}
-                        onChange={(e) => handleItineraryChange(index, e)}
-                        className="border rounded w-full p-2"
-                        placeholder="Day Description"
+                        className="border rounded w-32 p-2"
                       />
                     </div>
-                  ) : (
-                    <div className="space-y-2">
-                      <p className="font-bold">Date: {item.DATE}</p>
-                      <p className="text-lg font-semibold">{item.DAY_TITLE}</p>
-                      <p>{item.DAY_DESCRIPTION}</p>
-                    </div>
-                  )}
-                </div>
+                    <input
+                      type="text"
+                      name="DAY_TITLE"
+                      value={item.DAY_TITLE}
+                      onChange={(e) => handleItineraryChange(index, e)}
+                      className="border rounded w-full p-2"
+                      placeholder="Day Title"
+                    />
+                    <textarea
+                      name="DAY_DESCRIPTION"
+                      value={item.DAY_DESCRIPTION}
+                      onChange={(e) => handleItineraryChange(index, e)}
+                      className="border rounded w-full p-2"
+                      placeholder="Day Description"
+                    />
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <p className="font-bold">Date: {item.DATE}</p>
+                    <p className="text-lg font-semibold">{item.DAY_TITLE}</p>
+                    <p>{item.DAY_DESCRIPTION}</p>
+                  </div>
+                )}
+              </div>
               ))}
             </div>
 
@@ -337,17 +337,17 @@ function Edittrips() {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-            {Array.isArray(bookings) && bookings.map((booking, index) => (                <tr key={item.trip_id}>
-                  <td className="px-6 py-4 whitespace-nowrap">{item.booking_id}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">{item.order_id}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">{item.fullname}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">{item.age}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">{item.email}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">{item.phonenumber}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">{item.whatsappnumber}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">{item.member_state}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">{item.city}</td>
-                </tr>
+              {bookings.map((bookings, index) => (<tr key={bookings.trip_id}>
+                <td className="px-6 py-4 whitespace-nowrap">{bookings.booking_id}</td>
+                <td className="px-6 py-4 whitespace-nowrap">{bookings.order_id}</td>
+                <td className="px-6 py-4 whitespace-nowrap">{bookings.fullname}</td>
+                <td className="px-6 py-4 whitespace-nowrap">{bookings.age}</td>
+                <td className="px-6 py-4 whitespace-nowrap">{bookings.email}</td>
+                <td className="px-6 py-4 whitespace-nowrap">{bookings.phonenumber}</td>
+                <td className="px-6 py-4 whitespace-nowrap">{bookings.whatsappnumber}</td>
+                <td className="px-6 py-4 whitespace-nowrap">{bookings.member_state}</td>
+                <td className="px-6 py-4 whitespace-nowrap">{bookings.city}</td>
+              </tr>
               ))}
             </tbody>
           </table>
@@ -383,8 +383,8 @@ function Edittrips() {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-            {cancellations.map((item ) => (
-              <tr key={item.trip_id}>
+              {cancellations.map((item) => (
+                <tr key={item.trip_id}>
                   <td className="px-6 py-4 whitespace-nowrap">{item.booking_id}</td>
                   <td className="px-6 py-4 whitespace-nowrap">{item.order_id}</td>
                   <td className="px-6 py-4 whitespace-nowrap">{item.fullname}</td>

@@ -243,8 +243,8 @@ app.get('/alltrips', async (req, res) => {
 });
 
 
-app.get('/edittrips/:trip_id', async (req, res) => {
-    const trip_id = req.params.trip_id;
+app.get('/editdetailstrips/:trip_id', async (req, res) => {
+    const {trip_id} = req.params;
 
     if (!trip_id) {
         return res.status(400).json({ error: 'trip_id is required' });
@@ -278,7 +278,7 @@ app.get('/edittrips/:trip_id', async (req, res) => {
 
 
 app.get('/tripitenary/:trip_id', async (req, res) => {
-    const trip_id = req.params.trip_id;
+    const {trip_id }= req.params;
 
     if (!trip_id) {
         return res.status(400).json({ error: 'trip_id is required' });
