@@ -242,9 +242,8 @@ app.get('/alltrips', async (req, res) => {
     }
 });
 
-app.get('/editdetailstrips', async (req, res) => {
-    const trip_id = req.query.trip_id;
-
+app.get('/editdetailstrips/:trip_id', async (req, res) => {
+    const trip_id = req.params.trip_id;
     if (!trip_id) {
         return res.status(400).json({ error: 'trip_id is required' });
     }
@@ -277,8 +276,8 @@ app.get('/editdetailstrips', async (req, res) => {
 
 
 
-app.get('/tripitenary', async (req, res) => {
-    const trip_id = req.query.trip_id;
+app.get('/tripitenary/:trip_id', async (req, res) => {
+    const trip_id = req.params.trip_id;
 
     if (!trip_id) {
         return res.status(400).json({ error: 'trip_id is required' });
@@ -631,8 +630,8 @@ app.put('/deletetrips/:trip_id', async (req, res) => {
 
 
 
-app.get('/getbookingdetails', async (req, res) => {
-    const trip_id = req.query.trip_id;
+app.get('/getbookingdetails/:trip_id', async (req, res) => {
+    const trip_id = req.params.trip_id;
     console.log("id for bookings",trip_id)
     if (!trip_id) {
         return res.status(400).json({ message: 'Trip ID is required' });
@@ -652,8 +651,8 @@ app.get('/getbookingdetails', async (req, res) => {
         res.status(500).json({ error: 'Database connection failed' });
     }
 })
-app.get('/cancellations', async (req, res) => {
-    const trip_id = req.query.trip_id
+app.get('/cancellations/:trip_id', async (req, res) => {
+    const trip_id = req.params.trip_id
 
     if (!trip_id) {
         return res.status(400).json({ message: 'Trip ID is required' });

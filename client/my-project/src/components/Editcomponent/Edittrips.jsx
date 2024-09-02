@@ -25,25 +25,18 @@ function Edittrips() {
 
       try {
         const [detailsResponse, itineraryResponse, bookingsResponse, cancellationsresponse] = await Promise.all([
-          axios.get('https://admin.yeahtrips.in/editdetailstrips',{
-            params:{trip_id}
-          }),
-          axios.get('https://admin.yeahtrips.in/tripitenary', {
-            params:{trip_id}
-          }),
-          axios.get('https://admin.yeahtrips.in/getbookingdetails', {
-            params:{trip_id}
-          }),
-          axios.get('https://admin.yeahtrips.in/cancellations',{
-            params:{trip_id}
-          })
+          axios.get(`https://admin.yeahtrips.in/editdetailstrips/${trip_id}`),
+           
+          axios.get(`https://admin.yeahtrips.in/tripitenary/${trip_id}` ),
+          axios.get(`https://admin.yeahtrips.in/getbookingdetails/${trip_id}`),
+          axios.get(`https://admin.yeahtrips.in/cancellations/${trip_id}`)
         ]);
 
         setTripDetails(detailsResponse.data[0]);
         setTripItinerary(Array.isArray(itineraryResponse.data) ? itineraryResponse.data : []);
         setBookings(Array.isArray(bookingsResponse.data) ? bookingsResponse.data : []);
         setCancellations(Array.isArray(cancellationsresponse.data) ? cancellationsresponse.data : []);
-        console.log("Trip Details:", detailsResponse);
+        console.log("Trip Details:", detailsResponse.data);
         console.log("Trip Itinerary:", tripItinerary);
         console.log("Bookings:", bookings);
         console.log("cancellation", cancellations)
@@ -60,7 +53,7 @@ function Edittrips() {
 
     return () => {
     };
-  }, [location.state?.trip_id]);
+  }, [trip_id]);
 
 
   const convertToVCF = (data) => {
