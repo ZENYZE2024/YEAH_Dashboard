@@ -244,9 +244,8 @@ app.get('/alltrips', async (req, res) => {
 
 
 app.get('/edittrips/:trip_id', async (req, res) => {
+    const trip_id = req.params.trip_id;
 
-    const trip_id = req.params.trip_id; 
-    console.log(req.params)
     if (!trip_id) {
         return res.status(400).json({ error: 'trip_id is required' });
     }
@@ -270,21 +269,24 @@ app.get('/edittrips/:trip_id', async (req, res) => {
         res.json(rows);
     } catch (error) {
         console.error('Error fetching trip data:', error);
-        res.status(500).json({ error: 'An error occurred while fetching trip data' });
+        res.status(500).json({ error: 'An internal server error occurred' });
     } finally {
         if (connection) connection.release(); // Ensure connection is released
     }
 });
 
 
+
 app.get('/tripitenary/:trip_id', async (req, res) => {
     const trip_id = req.params.trip_id;
+
     if (!trip_id) {
         return res.status(400).json({ error: 'trip_id is required' });
     }
 
+    let connection;
     try {
-        const connection = await pool.getConnection();
+        connection = await pool.getConnection();
         const [rows] = await connection.query(
             `SELECT * 
              FROM tripitenary
@@ -293,15 +295,18 @@ app.get('/tripitenary/:trip_id', async (req, res) => {
         );
 
         if (rows.length === 0) {
-            return res.status(404).json({ error: 'Tripienary data not found' });
+            return res.status(404).json({ error: 'Trip itinerary data not found' });
         }
 
         res.json(rows);
     } catch (error) {
-        console.error('Error fetching tripienary data:', error);
-        res.status(500).json({ error: 'An error occurred while fetching tripienary data' });
+        console.error('Error fetching trip itinerary data:', error);
+        res.status(500).json({ error: 'An internal server error occurred' });
+    } finally {
+        if (connection) connection.release(); // Ensure connection is released
     }
 });
+
 
 app.put('/updatetrip', async (req, res) => {
     const tripDetails = req.body;
