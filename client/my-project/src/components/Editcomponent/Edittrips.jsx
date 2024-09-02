@@ -19,20 +19,24 @@ function Edittrips() {
   useEffect(() => {
     const fetchData = async () => {
 
-
+   console.log(trip_id)
       const storedRole = localStorage.getItem('role');
       setRole(storedRole);
 
       try {
         const [detailsResponse, itineraryResponse, bookingsResponse, cancellationsresponse] = await Promise.all([
-          axios.get(`https://admin.yeahtrips.in/editdetailstrips/${trip_id}`),
-          axios.get(`https://admin.yeahtrips.in/tripitenary/${trip_id}`, {
-
+          axios.get('https://admin.yeahtrips.in/editdetailstrips',{
+            params:{trip_id}
           }),
-          axios.get(`https://admin.yeahtrips.in/getbookingdetails/${trip_id}`, {
-
+          axios.get('https://admin.yeahtrips.in/tripitenary', {
+            params:{trip_id}
           }),
-          axios.get(`https://admin.yeahtrips.in/cancellations/${trip_id}`)
+          axios.get('https://admin.yeahtrips.in/getbookingdetails', {
+            params:{trip_id}
+          }),
+          axios.get('https://admin.yeahtrips.in/cancellations',{
+            params:{trip_id}
+          })
         ]);
 
         setTripDetails(detailsResponse.data[0]);
