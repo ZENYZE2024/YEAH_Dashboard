@@ -845,12 +845,18 @@ app.post('/carousaldatas', async (req, res) => {
 
 
 app.get('/gettingcarousaldatas', async (req, res) => {
+    let connection;
     try {
-        const [rows] = await pool.query('SELECT * FROM tripcarousals');
+        connection = await pool.getConnection();
+        
+        const [rows] = await connection.query('SELECT * FROM tripcarousals');
+        
         res.json(rows);
     } catch (err) {
         console.error('Error fetching carousals:', err);
         res.status(500).json({ error: 'Database query failed' });
+    } finally {
+        if (connection) connection.release();
     }
 });
 
