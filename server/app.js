@@ -853,7 +853,7 @@ app.get('/gettingcarousaldatas', async (req, res) => {
     }
 });
 
-app.delete('/carousaldatas/:id', async (req, res) => {
+app.delete('/carousaldatasdelete/:id', async (req, res) => {
     const { id } = req.params;
     const connection = await pool.getConnection();
     try {
@@ -943,7 +943,7 @@ app.get('/reviewcarousals', async (req, res) => {
 });
 
 
-app.delete('/carousals/:id', async (req, res) => {
+app.delete('/carousalsdelete/:id', async (req, res) => {
     let connection;
     const carousalId = req.params.id;
 
