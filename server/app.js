@@ -826,7 +826,7 @@ app.get('/getallusers', async (req, res) => {
     }
 });
 
-app.post('/carousaldatas', async (req, res) => {
+app.post('/carousaldatasdetailsinformation', async (req, res) => {
     const { title, author } = req.body;
     if (!title || !author) {
         return res.status(400).json({ message: 'Title and author are required' });
@@ -844,7 +844,7 @@ app.post('/carousaldatas', async (req, res) => {
 });
 
 
-app.get('/gettingcarousaldatas', async (req, res) => {
+app.get('/gettheinformationsincorousals', async (req, res) => {
     let connection;
     try {
         connection = await pool.getConnection();
