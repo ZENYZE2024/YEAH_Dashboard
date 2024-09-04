@@ -837,12 +837,12 @@ app.post('/carousaldatasdetailsinformation', async (req, res) => {
         const [result] = await connection.query('INSERT INTO tripcarousals (title, author) VALUES (?, ?)', [title, author]);
         res.status(201).json({ id: result.insertId, title, author });
     } catch (err) {
+        console.error(err); // Log error to server logs
         res.status(500).json({ message: 'Error inserting carousal' });
     } finally {
         connection.release();
     }
 });
-
 
 app.get('/gettheinformationsincorousals', async (req, res) => {
     let connection;
