@@ -1,3 +1,4 @@
+import axios from "axios";
 import React, { useState, useEffect } from "react";
 
 const Addreview = () => {
@@ -9,44 +10,48 @@ const Addreview = () => {
   // Fetch carousals from the server on component mount
   useEffect(() => {
     const fetchCarousals = async () => {
-      try {
-        const response = await fetch('https://admin.yeahtrips.in/reviewcarousals');
-        if (response.ok) {
-          const data = await response.json();
-          setCarousals(data);
-        } else {
-          console.error('Failed to fetch carousals');
+        try {
+          const response = await axios.get('https://admin.yeahtrips.in/reviewcarousals');
+          console.log("Fetched carousals:", response.data); // Log to check the data
+          if (Array.isArray(response.data)) {
+            setCarousals(response.data);
+          } else {
+            console.error("Fetched data is not an array:", response.data);
+            setCarousals([]); // Reset to empty array if data is not as expected
+          }
+        } catch (error) {
+          console.error('Error fetching carousals:', error);
         }
-      } catch (error) {
-        console.error('Error:', error);
-      }
-    };
+      };
+      
 
     fetchCarousals();
   }, []);
   const handleAddCarousal = async () => {
-    
     if (title && author) {
       const formData = new FormData();
       formData.append('title', title);
       formData.append('author', author);
       if (image) formData.append('image', image);
   
-      const response = await fetch('https://admin.yeahtrips.in/carousals', {
-        method: 'POST',
-        body: formData,
-      });
+      try {
+        console.log(formData)
+        const response = await axios.post('https://admin.yeahtrips.in/carousals', formData);
   
-      if (response.ok) {
-        const newCarousal = await response.json();
-        setCarousals(prevCarousals => [...prevCarousals, newCarousal]);
-        console.log("Updated carousals:", [...carousals, newCarousal]);
-        setTitle("");
-        setAuthor("");
-        setImage(null);
-        window.location.reload();
-      } else {
-        console.error('Failed to add carousal');
+        // Check if response status is in the range of 2xx
+        if (response.status >= 200 && response.status < 300) {
+          const newCarousal = response.data;
+          setCarousals(prevCarousals => [...prevCarousals, newCarousal]);
+          console.log("Updated carousals:", [...carousals, newCarousal]);
+          setTitle("");
+          setAuthor("");
+          setImage(null);
+          window.location.reload();
+        } else {
+          console.error('Failed to add carousal');
+        }
+      } catch (error) {
+        console.error('Error adding carousal:', error);
       }
     }
   };
@@ -58,12 +63,10 @@ const Addreview = () => {
 
   const handleDeleteCarousal = async (id) => {
     try {
-      const response = await fetch(`https://admin.yeahtrips.in/carousals/${id}`, {
-        method: 'DELETE',
-      });
-
-      if (response.ok) {
-        setCarousals(carousals.filter(carousal => carousal.id !== id));
+      const response = await axios.delete(`https://admin.yeahtrips.in/carousalsdelete/${id}`);
+  
+      if (response.status >= 200 && response.status < 300) {
+        setCarousals(prevCarousals => prevCarousals.filter(carousal => carousal.id !== id));
       } else {
         console.error('Failed to delete carousal');
       }
