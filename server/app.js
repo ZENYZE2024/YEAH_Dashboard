@@ -863,15 +863,25 @@ app.get('/gettingcarousaldatas', async (req, res) => {
 app.delete('/carousaldatasdelete/:id', async (req, res) => {
     const { id } = req.params;
     const connection = await pool.getConnection();
+    
     try {
+        // Check if the carousal exists
+        const [rows] = await connection.query('SELECT * FROM tripcarousals WHERE id = ?', [id]);
+        if (rows.length === 0) {
+            return res.status(404).json({ message: 'Carousal not found' });
+        }
+
+        // Delete the carousal
         await connection.query('DELETE FROM tripcarousals WHERE id = ?', [id]);
         res.status(204).send();
     } catch (err) {
+        console.error('Error deleting carousal:', err);
         res.status(500).json({ message: 'Error deleting carousal' });
     } finally {
         connection.release();
     }
 });
+
 
 app.post('/carousals', upload.any(), async (req, res) => {
     console.log('Request Body:', req.body);
