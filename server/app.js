@@ -888,7 +888,7 @@ app.post('/carousals', upload.any(), async (req, res) => {
 
     try {
         const {
-            title, author
+            title, author, rating // Include rating
         } = req.body;
 
         const files = req.files || [];
@@ -917,11 +917,11 @@ app.post('/carousals', upload.any(), async (req, res) => {
 
             const insertCarousalSQL = `
                 INSERT INTO carousals (
-                    title, author, image, created_at
-                ) VALUES (?, ?, ?, ?)
+                    title, author, image, rating, created_at
+                ) VALUES (?, ?, ?, ?, ?)
             `;
             const carousalValues = [
-                title, author, carousalImagePath, createdAt
+                title, author, carousalImagePath, parseFloat(rating), createdAt // Convert rating to float
             ];
 
             console.log('Inserting Carousal Values:', carousalValues);
@@ -945,6 +945,7 @@ app.post('/carousals', upload.any(), async (req, res) => {
         res.status(500).json({ error: 'Failed to process request' });
     }
 });
+
 app.get('/reviewcarousals', async (req, res) => {
     let connection;
     try {
@@ -994,5 +995,5 @@ app.get('*', (req, res) => {
 });
 
 app.listen(process.env.PORT, () => {
-    console.log(`Server is running on https://admin.yeahtrips.in:${process.env.PORT}`);
+    console.log(`Server is running on http://localhost:${process.env.PORT}`);
 });
