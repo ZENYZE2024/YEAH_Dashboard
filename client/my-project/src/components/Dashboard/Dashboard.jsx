@@ -14,6 +14,14 @@ const Dashhboard = () => {
     navigate('/usersmanagement');
   };
 
+  const handleAddCarousalsClick = () => {
+    navigate('/addcarousals'); 
+  };
+
+  const handleAddReviewClick = () => {
+    navigate('/addreview');
+  };
+
   return (
     <div className="flex bg-gray-100">
       <div className="w-64 bg-gray-800 text-white p-5">
@@ -31,7 +39,7 @@ const Dashhboard = () => {
             <button
               className="w-full text-left py-2 px-4 rounded hover:bg-gray-700"
             >
-              Cancelation Policy
+              Cancellation Policy
             </button>
           </li>
           <li>
@@ -40,6 +48,22 @@ const Dashhboard = () => {
               className="w-full text-left py-2 px-4 rounded hover:bg-gray-700"
             >
               User Management
+            </button>
+          </li>
+          <li>
+            <button
+              onClick={handleAddCarousalsClick}
+              className="w-full text-left py-2 px-4 rounded hover:bg-gray-700"
+            >
+              Add Carousals
+            </button>
+          </li>
+          <li>
+            <button
+              onClick={handleAddReviewClick}
+              className="w-full text-left py-2 px-4 rounded hover:bg-gray-700"
+            >
+              Add Review
             </button>
           </li>
         </ul>

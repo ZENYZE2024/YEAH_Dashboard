@@ -398,12 +398,13 @@ app.post('/addtrips', upload.any(), async (req, res) => {
 
     try {
         const {
-            trip_name, trip_code, cost, seats, trip_start_date, end_date,
+            trip_name, trip_code, cost, seats, trip_start_date_formatted, end_date_formatted,
             trip_start_point, trip_end_point, destination, trip_duration,
             traveller_type, inclusion, exclusion, points_to_note, trip_type,
             itinerary, trip_description, googlemap, whatsapplink, userId, additionalpickuppoint, coordinators
         } = req.body;
-
+        const trip_start_date = trip_start_date_formatted;
+        const end_date = end_date_formatted
         const totalseats = seats;
         const slug = generateSlug(trip_name);
         const files = req.files || [];
@@ -825,6 +826,150 @@ app.get('/getallusers', async (req, res) => {
     }
 });
 
+app.post('/carousaldatas', async (req, res) => {
+    const { title, author } = req.body;
+    if (!title || !author) {
+        return res.status(400).json({ message: 'Title and author are required' });
+    }
+
+    const connection = await pool.getConnection();
+    try {
+        const [result] = await connection.query('INSERT INTO tripcarousals (title, author) VALUES (?, ?)', [title, author]);
+        res.status(201).json({ id: result.insertId, title, author });
+    } catch (err) {
+        res.status(500).json({ message: 'Error inserting carousal' });
+    } finally {
+        connection.release();
+    }
+});
+
+app.get('/gettingcarousaldatas', async (req, res) => {
+    try {
+        const [rows] = await pool.query('SELECT * FROM tripcarousals');
+        res.json(rows);
+    } catch (err) {
+        console.error('Error fetching carousals:', err);
+        res.status(500).json({ error: 'Database query failed' });
+    }
+});
+
+app.delete('/carousaldatas/:id', async (req, res) => {
+    const { id } = req.params;
+    const connection = await pool.getConnection();
+    try {
+        await connection.query('DELETE FROM tripcarousals WHERE id = ?', [id]);
+        res.status(204).send();
+    } catch (err) {
+        res.status(500).json({ message: 'Error deleting carousal' });
+    } finally {
+        connection.release();
+    }
+});
+
+app.post('/carousals', upload.any(), async (req, res) => {
+    console.log('Request Body:', req.body);
+
+    try {
+        const {
+            title, author
+        } = req.body;
+
+        const files = req.files || [];
+        let carousalImagePath = '';
+
+        files.forEach(file => {
+            const filePath = `uploads/${file.filename}`;
+            const fieldName = file.fieldname;
+
+            if (fieldName === 'image') {
+                carousalImagePath = filePath;
+                console.log(`Set carousalImagePath to: ${filePath}`);
+            } else {
+                console.warn(`Unexpected fieldname format: ${fieldName}`);
+            }
+        });
+
+        console.log('Carousal Image Path:', carousalImagePath);
+
+        let connection;
+        try {
+            connection = await pool.getConnection();
+            await connection.beginTransaction();
+
+            const createdAt = new Date();
+
+            const insertCarousalSQL = `
+                INSERT INTO carousals (
+                    title, author, image, created_at
+                ) VALUES (?, ?, ?, ?)
+            `;
+            const carousalValues = [
+                title, author, carousalImagePath, createdAt
+            ];
+
+            console.log('Inserting Carousal Values:', carousalValues);
+
+            const [result] = await connection.query(insertCarousalSQL, carousalValues);
+            const carousal_id = result.insertId;
+
+            console.log('Inserted Carousal ID:', carousal_id);
+
+            await connection.commit();
+            res.json({ message: 'Carousal data inserted successfully!' });
+        } catch (error) {
+            if (connection) await connection.rollback();
+            console.error('Transaction error:', error);
+            res.status(500).json({ error: 'Failed to process request' });
+        } finally {
+            if (connection) connection.release();
+        }
+    } catch (err) {
+        console.error('Error processing request:', err);
+        res.status(500).json({ error: 'Failed to process request' });
+    }
+});
+app.get('/reviewcarousals', async (req, res) => {
+    let connection;
+    try {
+        connection = await pool.getConnection();
+        const [rows] = await connection.query('SELECT * FROM carousals');
+        res.json(rows);
+    } catch (err) {
+        console.error('Error fetching carousals:', err);
+        res.status(500).json({ error: 'Failed to fetch carousals' });
+    } finally {
+        if (connection) connection.release();
+    }
+});
+
+
+app.delete('/carousals/:id', async (req, res) => {
+    let connection;
+    const carousalId = req.params.id;
+
+    try {
+        connection = await pool.getConnection();
+        
+        const deleteQuery = 'DELETE FROM carousals WHERE id = ?';
+        const [result] = await connection.query(deleteQuery, [carousalId]);
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ error: 'Carousal not found' });
+        }
+
+        res.json({ message: 'Carousal deleted successfully' });
+    } catch (err) {
+        console.error('Error deleting carousal:', err);
+        res.status(500).json({ error: 'Failed to delete carousal' });
+    } finally {
+        if (connection) connection.release();
+    }
+});
+
+
+
+
+
 app.use(express.static(path.join(__dirname, 'public')));
 
 app.get('*', (req, res) => {
@@ -832,5 +977,5 @@ app.get('*', (req, res) => {
 });
 
 app.listen(process.env.PORT, () => {
-    console.log(`Server is running on http://localhost:${process.env.PORT}`);
+    console.log(`Server is running on https://admin.yeahtrips.in:${process.env.PORT}`);
 });

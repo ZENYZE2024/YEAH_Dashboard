@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
+import ReactQuill from 'react-quill';
+import 'react-quill/dist/quill.snow.css';
 import { format, differenceInDays, addDays } from 'date-fns';
 
 function Addtripdetails() {
@@ -32,7 +34,7 @@ function Addtripdetails() {
     const [tripImages, setTripImages] = useState([]);
     const [additionalImages, setAdditionalImages] = useState([]);
     const [additionalImageInputs, setAdditionalImageInputs] = useState([{ id: Date.now() }]);
-    const [coordinators, setCoordinators] = useState([{ name: '', role: '', email: '',cordinator_id :'', image: null }]);
+    const [coordinators, setCoordinators] = useState([{ name: '', role: '', email: '', cordinator_id: '', image: null }]);
 
 
     useEffect(() => {
@@ -50,7 +52,7 @@ function Addtripdetails() {
         for (let i = 1; i <= numDays; i++) {
             newDays.push({
                 DAY: `Day ${i}`,
-                DATE: format(addDays(start, i - 1), 'd MMMM yyyy'),
+                DATE: formatDateWithSuffix(addDays(start, i - 1), 'd MMMM yyyy'),
                 DAY_TITLE: '',
                 DAY_DESCRIPTION: '',
                 IMAGES: [],
@@ -128,10 +130,26 @@ function Addtripdetails() {
         }
     };
 
-    const handleFieldChange = (field, value) => {
-        setFormData((prevData) => ({ ...prevData, [field]: value }));
+
+    const formatDateWithSuffix = (date) => {
+        const day = date.getDate();
+        const suffix = day % 10 === 1 && day !== 11 ? 'st' :
+            day % 10 === 2 && day !== 12 ? 'nd' :
+                day % 10 === 3 && day !== 13 ? 'rd' : 'th';
+        const month = date.toLocaleString('default', { month: 'long' });
+        const year = date.getFullYear();
+        return `${day}${suffix} ${month} ${year}`;
     };
 
+
+    const handleFieldChange = (field, value) => {
+        if (field === 'trip_start_date' || field === 'end_date') {
+            const formattedDate = formatDateWithSuffix(value);
+            setFormData((prevData) => ({ ...prevData, [field]: value, [`${field}_formatted`]: formattedDate }));
+        } else {
+            setFormData((prevData) => ({ ...prevData, [field]: value }));
+        }
+    };
     const handleAddDay = () => {
         setDays([...days, {
             DAY: `Day ${days.length + 1}`,
@@ -190,7 +208,7 @@ function Addtripdetails() {
     };
 
     const addCoordinator = () => {
-        setCoordinators([...coordinators, { name: '', role: '', email: '', image: null,cordinator_id:'' }]);
+        setCoordinators([...coordinators, { name: '', role: '', email: '', image: null, cordinator_id: '' }]);
     };
 
     const removeCoordinator = (index) => {
@@ -251,17 +269,20 @@ function Addtripdetails() {
                         className="border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 p-2"
                         required
                     />
+                    {formData.trip_start_date_formatted && <p>Formatted Date: {formData.trip_start_date_formatted}</p>}
                 </div>
                 <div className="flex flex-col">
-                    <label className="text-sm font-medium text-gray-700 mb-1">End Date</label>
-                    <DatePicker
-                        selected={formData.end_date}
-                        onChange={(date) => handleFieldChange('end_date', date)}
-                        dateFormat="MMMM d, yyyy"
-                        className="border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 p-2"
-                        required
-                    />
-                </div>
+    <label className="text-sm font-medium text-gray-700 mb-1">End Date</label>
+    <DatePicker
+        selected={formData.end_date}
+        onChange={(date) => handleFieldChange('end_date', date)}
+        dateFormat="MMMM d, yyyy"
+        className="border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 p-2"
+        required
+    />
+    {formData.end_date_formatted && <p>Formatted End Date: {formData.end_date_formatted}</p>}
+</div>
+
                 <div className="flex flex-col">
                     <label className="text-sm font-medium text-gray-700 mb-1">Start Point</label>
                     <input
@@ -314,31 +335,31 @@ function Addtripdetails() {
                 </div>
                 <div className="flex flex-col">
                     <label className="text-sm font-medium text-gray-700 mb-1">Inclusion</label>
-                    <textarea
+                    <ReactQuill
                         value={formData.inclusion}
-                        onChange={(e) => handleFieldChange('inclusion', e.target.value)}
+                        onChange={(value) => handleFieldChange('inclusion', value)}
                         className="border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 p-2"
-                        rows="3"
+                        theme="snow"
                         required
                     />
                 </div>
                 <div className="flex flex-col">
                     <label className="text-sm font-medium text-gray-700 mb-1">Exclusion</label>
-                    <textarea
+                    <ReactQuill
                         value={formData.exclusion}
-                        onChange={(e) => handleFieldChange('exclusion', e.target.value)}
+                        onChange={(value) => handleFieldChange('exclusion', value)}
                         className="border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 p-2"
-                        rows="3"
+                        theme="snow"
                         required
                     />
                 </div>
                 <div className="flex flex-col">
                     <label className="text-sm font-medium text-gray-700 mb-1">Points to Note</label>
-                    <textarea
+                    <ReactQuill
                         value={formData.points_to_note}
-                        onChange={(e) => handleFieldChange('points_to_note', e.target.value)}
+                        onChange={(value) => handleFieldChange('points_to_note', value)}
                         className="border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 p-2"
-                        rows="3"
+                        theme="snow"
                         required
                     />
                 </div>
@@ -354,11 +375,11 @@ function Addtripdetails() {
                 </div>
                 <div className="flex flex-col">
                     <label className="text-sm font-medium text-gray-700 mb-1">Trip Description</label>
-                    <textarea
+                    <ReactQuill
                         value={formData.trip_description}
-                        onChange={(e) => handleFieldChange('trip_description', e.target.value)}
+                        onChange={(value) => handleFieldChange('trip_description', value)}
                         className="border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 p-2"
-                        rows="4"
+                        theme="snow"
                         required
                     />
                 </div>
