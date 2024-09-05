@@ -887,13 +887,13 @@ app.post('/carousals', upload.any(), async (req, res) => {
     console.log('Request Body:', req.body);
 
     try {
-        const {
-            title, author, rating // Include rating
-        } = req.body;
-
+        const { title, author, rating } = req.body;
         const files = req.files || [];
-        let carousalImagePath = '';
 
+        let carousalImagePath = '';
+        let authorImagePath = ''; // Variable to store author's image path
+
+        // Loop through the uploaded files and assign the correct paths
         files.forEach(file => {
             const filePath = `uploads/${file.filename}`;
             const fieldName = file.fieldname;
@@ -901,12 +901,16 @@ app.post('/carousals', upload.any(), async (req, res) => {
             if (fieldName === 'image') {
                 carousalImagePath = filePath;
                 console.log(`Set carousalImagePath to: ${filePath}`);
+            } else if (fieldName === 'authorImage') {
+                authorImagePath = filePath;
+                console.log(`Set authorImagePath to: ${filePath}`);
             } else {
                 console.warn(`Unexpected fieldname format: ${fieldName}`);
             }
         });
 
         console.log('Carousal Image Path:', carousalImagePath);
+        console.log('Author Image Path:', authorImagePath);
 
         let connection;
         try {
@@ -915,13 +919,14 @@ app.post('/carousals', upload.any(), async (req, res) => {
 
             const createdAt = new Date();
 
+            // SQL query to insert carousal data including the author's image
             const insertCarousalSQL = `
                 INSERT INTO carousals (
-                    title, author, image, rating, created_at
-                ) VALUES (?, ?, ?, ?, ?)
+                    title, author, image, author_image, rating, created_at
+                ) VALUES (?, ?, ?, ?, ?, ?)
             `;
             const carousalValues = [
-                title, author, carousalImagePath, parseFloat(rating), createdAt // Convert rating to float
+                title, author, carousalImagePath, authorImagePath, parseFloat(rating), createdAt // Include author's image path
             ];
 
             console.log('Inserting Carousal Values:', carousalValues);
@@ -932,7 +937,7 @@ app.post('/carousals', upload.any(), async (req, res) => {
             console.log('Inserted Carousal ID:', carousal_id);
 
             await connection.commit();
-            res.json({ message: 'Carousal data inserted successfully!' });
+            res.json({ message: 'Carousal and author image inserted successfully!' });
         } catch (error) {
             if (connection) await connection.rollback();
             console.error('Transaction error:', error);
@@ -945,6 +950,7 @@ app.post('/carousals', upload.any(), async (req, res) => {
         res.status(500).json({ error: 'Failed to process request' });
     }
 });
+
 
 app.get('/reviewcarousals', async (req, res) => {
     let connection;
@@ -995,5 +1001,5 @@ app.get('*', (req, res) => {
 });
 
 app.listen(process.env.PORT, () => {
-    console.log(`Server is running on http://localhost:${process.env.PORT}`);
+    console.log(`Server is running on https://admin.yeahtrips.in:${process.env.PORT}`);
 });
