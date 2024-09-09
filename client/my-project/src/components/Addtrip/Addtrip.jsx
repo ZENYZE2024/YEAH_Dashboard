@@ -26,8 +26,7 @@ function Addtripdetails() {
         trip_description: '',
         googlemap: '',
         whatsapplink: '',
-        additionalpickuppoint: ''
-
+        additionalPickUpPoints: [{ pickUpPoint: '', time: '12:00 AM' }]
     });
 
     const [days, setDays] = useState([]);
@@ -117,8 +116,9 @@ function Addtripdetails() {
 
 
         try {
-            console.log(form)
-            const response = await axios.post('https://admin.yeahtrips.in/addtrips', form, {
+            console.log(formData.additionalPickUpPoints);
+            form.append('additionalPickUpPoints', JSON.stringify(formData.additionalPickUpPoints));
+                        const response = await axios.post('https://admin.yeahtrips.in/addtrips', form, {
                 headers: {
                     'Content-Type': 'multipart/form-data',
                 },
@@ -216,6 +216,52 @@ function Addtripdetails() {
         setCoordinators(updatedCoordinators);
     };
 
+    const handleFormFieldChange = (e) => {
+        const { name, value } = e.target;
+        setFormData(prevState => ({ ...prevState, [name]: value }));
+    };
+
+    const handleAdditionalPickUpPointChange = (index, field, value) => {
+        setFormData(prevState => {
+            const updatedPickUpPoints = [...prevState.additionalPickUpPoints];
+            const point = updatedPickUpPoints[index];
+            if (field === 'pickUpPoint') {
+                point.pickUpPoint = value;
+            } else if (field === 'time') {
+                const [hours, minutes, period] = value.split(/[:\s]/);
+                point.time = `${hours || '12'}:${minutes || '00'} ${period || 'AM'}`;
+            }
+            return { ...prevState, additionalPickUpPoints: updatedPickUpPoints };
+        });
+    };
+    const handleAddPickUpPoint = () => {
+        setFormData(prevState => ({
+            ...prevState,
+            additionalPickUpPoints: [...prevState.additionalPickUpPoints, { pickUpPoint: '', time: '12:00 AM' }]
+        }));
+    };
+
+    const handleRemovePickUpPoint = (index) => {
+        const updatedPickUpPoints = formData.additionalPickUpPoints.filter((_, i) => i !== index);
+        setFormData(prevState => ({ ...prevState, additionalPickUpPoints: updatedPickUpPoints }));
+    };
+
+    const formatTimeTo12Hour = (time) => {
+        if (!time) return '12:00 AM';
+        const [hours, minutes, period] = time.split(/[:\s]/);
+        const adjustedHours = parseInt(hours, 10) % 12 || 12;
+        const adjustedMinutes = isNaN(parseInt(minutes, 10)) ? '00' : minutes;
+        return `${String(adjustedHours).padStart(2, '0')}:${String(adjustedMinutes).padStart(2, '0')} ${period || 'AM'}`;
+    };
+
+    const convertTo24Hour = (time) => {
+        if (!time) return '';
+        const [hours, minutes, period] = time.split(/[:\s]/);
+        let adjustedHours = parseInt(hours, 10);
+        if (period === 'PM' && adjustedHours !== 12) adjustedHours += 12;
+        if (period === 'AM' && adjustedHours === 12) adjustedHours = 0;
+        return `${String(adjustedHours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+    };
     return (
         <div className="p-6 max-w-3xl mx-auto bg-white rounded-lg shadow-md">
             <h1 className="text-2xl font-semibold mb-6 text-gray-800">Add Trip Details</h1>
@@ -272,16 +318,16 @@ function Addtripdetails() {
                     {formData.trip_start_date_formatted && <p>Formatted Date: {formData.trip_start_date_formatted}</p>}
                 </div>
                 <div className="flex flex-col">
-    <label className="text-sm font-medium text-gray-700 mb-1">End Date</label>
-    <DatePicker
-        selected={formData.end_date}
-        onChange={(date) => handleFieldChange('end_date', date)}
-        dateFormat="MMMM d, yyyy"
-        className="border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 p-2"
-        required
-    />
-    {formData.end_date_formatted && <p>Formatted End Date: {formData.end_date_formatted}</p>}
-</div>
+                    <label className="text-sm font-medium text-gray-700 mb-1">End Date</label>
+                    <DatePicker
+                        selected={formData.end_date}
+                        onChange={(date) => handleFieldChange('end_date', date)}
+                        dateFormat="MMMM d, yyyy"
+                        className="border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 p-2"
+                        required
+                    />
+                    {formData.end_date_formatted && <p>Formatted End Date: {formData.end_date_formatted}</p>}
+                </div>
 
                 <div className="flex flex-col">
                     <label className="text-sm font-medium text-gray-700 mb-1">Start Point</label>
@@ -383,30 +429,84 @@ function Addtripdetails() {
                         required
                     />
                 </div>
-                <div className="flex flex-col">
-                    <label className="text-sm font-medium text-gray-700 mb-1">Google Map Link</label>
-                    <input
-                        type="text"
-                        value={formData.googlemap}
-                        onChange={(e) => handleFieldChange('googlemap', e.target.value)}
-                        className="border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 p-2"
-                    />
-                </div>
-                <div className="flex flex-col">
-                    <label className="text-sm font-medium text-gray-700 mb-1">Additional Pickup point</label>
-                    <input
-                        type="text"
-                        value={formData.additionalpickuppoint}
-                        onChange={(e) => handleFieldChange('additionalpickuppoint', e.target.value)}
-                        className="border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 p-2"
-                    />
-                </div>
+                <div className="space-y-4">
+            <label className="text-sm font-medium text-gray-700">Additional Pickup Points</label>
+            {formData.additionalPickUpPoints.map((point, index) => {
+                const timeParts = point.time ? formatTimeTo12Hour(point.time).split(/[:\s]/) : ['12', '00', 'AM'];
+                return (
+                    <div key={index} className="flex space-x-4 mb-2">
+                        <input
+                            type="text"
+                            placeholder="Pickup Point"
+                            value={point.pickUpPoint}
+                            onChange={(e) => handleAdditionalPickUpPointChange(index, 'pickUpPoint', e.target.value)}
+                            className="border border-gray-300 rounded-md p-2 flex-1"
+                        />
+                        <div className="flex space-x-2 flex-1">
+                            <select
+                                value={timeParts[0]}
+                                onChange={(e) => handleAdditionalPickUpPointChange(index, 'time', `${e.target.value}:${timeParts[1]} ${timeParts[2]}`)}
+                                className="border border-gray-300 rounded-md p-2 flex-1"
+                            >
+                                {Array.from({ length: 12 }, (_, i) => i + 1).map(hour => (
+                                    <option key={hour} value={String(hour).padStart(2, '0')}>
+                                        {String(hour).padStart(2, '0')}
+                                    </option>
+                                ))}
+                            </select>
+                            <select
+                                value={timeParts[1]}
+                                onChange={(e) => handleAdditionalPickUpPointChange(index, 'time', `${timeParts[0]}:${e.target.value} ${timeParts[2]}`)}
+                                className="border border-gray-300 rounded-md p-2 flex-1"
+                            >
+                                {Array.from({ length: 60 }, (_, i) => i).map(minute => (
+                                    <option key={minute} value={String(minute).padStart(2, '0')}>
+                                        {String(minute).padStart(2, '0')}
+                                    </option>
+                                ))}
+                            </select>
+                            <select
+                                value={timeParts[2]}
+                                onChange={(e) => handleAdditionalPickUpPointChange(index, 'time', `${timeParts[0]}:${timeParts[1]} ${e.target.value}`)}
+                                className="border border-gray-300 rounded-md p-2 flex-1"
+                            >
+                                <option value="AM">AM</option>
+                                <option value="PM">PM</option>
+                            </select>
+                        </div>
+                        <button
+                            type="button"
+                            onClick={() => handleRemovePickUpPoint(index)}
+                            className="text-red-500"
+                        >
+                            Remove
+                        </button>
+                    </div>
+                );
+            })}
+            <button
+                type="button"
+                onClick={handleAddPickUpPoint}
+                className="mt-2 bg-blue-500 text-white p-2 rounded-md"
+            >
+                Add Pickup Point
+            </button>
+        </div>
                 <div className="flex flex-col">
                     <label className="text-sm font-medium text-gray-700 mb-1">WhatsApp Link</label>
                     <input
                         type="text"
                         value={formData.whatsapplink}
                         onChange={(e) => handleFieldChange('whatsapplink', e.target.value)}
+                        className="border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 p-2"
+                    />
+                </div>
+                <div className="flex flex-col">
+                    <label className="text-sm font-medium text-gray-700 mb-1">GoogleMap Link</label>
+                    <input
+                        type="text"
+                        value={formData.googlemap}
+                        onChange={(e) => handleFieldChange('googlemap', e.target.value)}
                         className="border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 p-2"
                     />
                 </div>

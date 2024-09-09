@@ -401,7 +401,7 @@ app.post('/addtrips', upload.any(), async (req, res) => {
             trip_name, trip_code, cost, seats, trip_start_date_formatted, end_date_formatted,
             trip_start_point, trip_end_point, destination, trip_duration,
             traveller_type, inclusion, exclusion, points_to_note, trip_type,
-            itinerary, trip_description, googlemap, whatsapplink, userId, additionalpickuppoint, coordinators
+            itinerary, trip_description, googlemap, whatsapplink, userId, coordinators
         } = req.body;
         const trip_start_date = trip_start_date_formatted;
         const end_date = end_date_formatted
@@ -412,9 +412,31 @@ app.post('/addtrips', upload.any(), async (req, res) => {
         let tripImagePath = '';
         const additionalImages = {};
         const imagesMap = {};
-        const coordinatorImages = {}; // Map to store coordinator images
+        const coordinatorImages = {}; 
+        let { additionalPickUpPoints } = req.body;
+        console.log("additionalpointsreceived",additionalPickUpPoints)
+          console.log(typeof additionalPickUpPoints)
+          additionalPickUpPoints = additionalPickUpPoints.map(point => {
+            if (typeof point === 'string' && point.includes('[object Object]')) {
+                // If it looks like an improperly serialized object, skip it
+                return null;
+            }
+            if (typeof point === 'string') {
+                try {
+                    // Try to parse it as JSON if it's a string
+                    return JSON.parse(point);
+                } catch (err) {
+                    console.error('Error parsing JSON string:', point);
+                    return null; // Return null on failure
+                }
+            }
+            return point; // If it's already an object, return it
+        }).filter(point => point); // Filter out any null values
 
-        files.forEach(file => {
+        console.log("Parsed additional pick-up points:", additionalPickUpPoints);
+        
+
+                files.forEach(file => {
             const filePath = `uploads/${file.filename}`;
             const fieldName = file.fieldname;
 
@@ -502,14 +524,14 @@ app.post('/addtrips', upload.any(), async (req, res) => {
                     trip_name, trip_code, slug, cost, seats, totalseats, trip_start_date, end_date,
                     trip_start_point, trip_end_point, destination, trip_duration,
                     traveller_type, inclusion, exclusion, points_to_note, trip_type, trip_description, googlemap, whatsapplink,
-                    created_by, created_at, additionalpickuppoint
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    created_by, created_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             `;
             const tripValues = [
                 trip_name, trip_code, slug, cost, seats, totalseats, trip_start_date, end_date,
                 trip_start_point, trip_end_point, destination, trip_duration,
                 traveller_type, inclusion, exclusion, points_to_note, trip_type, trip_description, googlemap, whatsapplink,
-                userName, createdAt, additionalpickuppoint
+                userName, createdAt
             ];
 
             console.log('Inserting Trip Values:', tripValues);
@@ -518,6 +540,60 @@ app.post('/addtrips', upload.any(), async (req, res) => {
             const trip_id = result.insertId;
 
             console.log('Inserted Trip ID:', trip_id);
+
+            // Insert additional pickup points
+            if (Array.isArray(additionalPickUpPoints)) {
+                const insertPickUpPointSQL = `
+                    INSERT INTO pickuppoints (trip_id, pickuppoint, time)
+                    VALUES (?, ?, ?)
+                `;
+                
+                for (const pointArray of additionalPickUpPoints) {
+                    console.log("Point object array:", pointArray);
+                
+                    // Check if pointArray is a string, parse only if it is a string
+                    let points;
+                    if (typeof pointArray === 'string') {
+                        try {
+                            points = JSON.parse(pointArray);
+                        } catch (err) {
+                            console.error('Failed to parse pointArray:', err);
+                            continue; // Skip to the next iteration if parsing fails
+                        }
+                    } else {
+                        points = pointArray; // If it's already an array/object, use it directly
+                    }
+                
+                    for (const point of points) {
+                        console.log("Individual point object:", point);
+                
+                        // Validate the data
+                        const pickUpPoint = point.pickUpPoint;
+                        const time = point.time;
+                
+                        // Log the values that will be inserted
+                        console.log('Inserting Pick Up Point Values:', [trip_id, pickUpPoint, time]);
+                
+                        // Check if any of the values are null and handle them
+                        if (pickUpPoint === null || time === null) {
+                            console.error('Invalid data:', { pickUpPoint, time });
+                            continue; // Skip this iteration
+                        }
+                
+                        // Insert into the database
+                        try {
+                            await connection.query(insertPickUpPointSQL, [trip_id, pickUpPoint, time]);
+                            console.log('Inserted pickup point:', { trip_id, pickUpPoint, time });
+                        } catch (err) {
+                            console.error('Error inserting pickup point:', err);
+                        }
+                    }
+                }
+                
+            } else {
+                console.error('additionalPickUpPoints is not an array:', additionalPickUpPoints);
+            }
+            
 
             if (tripImagePath) {
                 await insertImage(connection, trip_id, tripImagePath, 'trip_image');
@@ -586,6 +662,7 @@ app.post('/addtrips', upload.any(), async (req, res) => {
         res.status(500).json({ error: 'Failed to process request' });
     }
 });
+
 
 
 
