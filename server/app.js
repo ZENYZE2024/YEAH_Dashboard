@@ -18,7 +18,7 @@ app.use(bodyParser.json({ limit: '50mb' }));
 app.use(bodyParser.urlencoded({ limit: '50mb', extended: true }));
 
 
-const uploadDir = 'uploads/';
+const uploadDir = 'uploads\\';
 if (!fs.existsSync(uploadDir)) {
     fs.mkdirSync(uploadDir);
 }
@@ -404,7 +404,7 @@ app.post('/addtrips', upload.any(), async (req, res) => {
             itinerary, trip_description, googlemap, whatsapplink, userId, coordinators
         } = req.body;
         const trip_start_date = trip_start_date_formatted;
-        const end_date = end_date_formatted
+        const end_date = end_date_formatted;
         const totalseats = seats;
         const slug = generateSlug(trip_name);
         const files = req.files || [];
@@ -412,53 +412,38 @@ app.post('/addtrips', upload.any(), async (req, res) => {
         let tripImagePath = '';
         const additionalImages = {};
         const imagesMap = {};
-        const coordinatorImages = {}; 
+        const coordinatorImages = {};
         let { additionalPickUpPoints } = req.body;
-        console.log("additionalpointsreceived",additionalPickUpPoints)
-          console.log(typeof additionalPickUpPoints)
-          additionalPickUpPoints = additionalPickUpPoints.map(point => {
+
+        // Process additional pick-up points
+        additionalPickUpPoints = additionalPickUpPoints.map(point => {
             if (typeof point === 'string' && point.includes('[object Object]')) {
-                // If it looks like an improperly serialized object, skip it
                 return null;
             }
             if (typeof point === 'string') {
                 try {
-                    // Try to parse it as JSON if it's a string
                     return JSON.parse(point);
                 } catch (err) {
                     console.error('Error parsing JSON string:', point);
-                    return null; // Return null on failure
+                    return null;
                 }
             }
-            return point; // If it's already an object, return it
-        }).filter(point => point); // Filter out any null values
+            return point;
+        }).filter(point => point);
 
         console.log("Parsed additional pick-up points:", additionalPickUpPoints);
-        
 
-                files.forEach(file => {
-            const filePath = `uploads/${file.filename}`;
+        files.forEach(file => {
+            const filePath = `\\uploads\\${file.filename}`; 
             const fieldName = file.fieldname;
 
-            console.log(`Processing file: ${file.filename} with fieldname: ${fieldName}`);
-
             if (fieldName.startsWith('trip_images')) {
-                const tripImageMatch = fieldName.match(/^trip_images\[(\d+)\]$/);
-                if (tripImageMatch) {
-                    tripImagePath = filePath;
-                    console.log(`Set tripImagePath to: ${filePath}`);
-                } else {
-                    console.warn(`Unexpected fieldname format for trip image: ${fieldName}`);
-                }
+                tripImagePath = filePath;
             } else if (fieldName.startsWith('additional_images')) {
                 const imageMatch = fieldName.match(/^additional_images_(\d+)\[(\d+)\]$/);
                 if (imageMatch) {
-                    const imageIndex = parseInt(imageMatch[1], 10);
-                    const adjustedIndex = imageIndex + 1;
-                    additionalImages[`additional_image_${adjustedIndex}`] = filePath;
-                    console.log(`Added additional image ${adjustedIndex} with path: ${filePath}`);
-                } else {
-                    console.warn(`Invalid format for additional image: ${fieldName}`);
+                    const imageIndex = parseInt(imageMatch[1], 10) + 1;
+                    additionalImages[`additional_image_${imageIndex}`] = filePath;
                 }
             } else if (file.fieldname.includes('itinerary')) {
                 const dayMatch = file.fieldname.match(/itinerary\[(\d+)\]/);
@@ -469,7 +454,7 @@ app.post('/addtrips', upload.any(), async (req, res) => {
             } else if (file.fieldname.includes('coordinators')) {
                 const coordinatorMatch = file.fieldname.match(/^coordinators\[(\d+)\]\[(\w+)\]$/);
                 if (coordinatorMatch) {
-                    const coordinatorIndex = parseInt(coordinatorMatch[1], 10) + 1; // Adjust index to start from 1
+                    const coordinatorIndex = parseInt(coordinatorMatch[1], 10) + 1;
                     const fieldType = coordinatorMatch[2];
 
                     if (!coordinatorImages[coordinatorIndex]) {
@@ -478,22 +463,14 @@ app.post('/addtrips', upload.any(), async (req, res) => {
 
                     if (fieldType === 'image') {
                         coordinatorImages[coordinatorIndex].image = filePath;
-                        console.log(`Coordinator ${coordinatorIndex} image path set to: ${filePath}`);
                     } else if (fieldType === 'name') {
                         coordinatorImages[coordinatorIndex].name = req.body[`coordinators[${coordinatorIndex - 1}][name]`];
-                        console.log(`Coordinator ${coordinatorIndex} name set to: ${req.body[`coordinators[${coordinatorIndex - 1}][name]`]}`);
                     } else if (fieldType === 'role') {
                         coordinatorImages[coordinatorIndex].role = req.body[`coordinators[${coordinatorIndex - 1}][role]`];
-                        console.log(`Coordinator ${coordinatorIndex} role set to: ${req.body[`coordinators[${coordinatorIndex - 1}][role]`]}`);
                     } else if (fieldType === 'email') {
                         coordinatorImages[coordinatorIndex].email = req.body[`coordinators[${coordinatorIndex - 1}][email]`];
-                        console.log(`Coordinator ${coordinatorIndex} email set to: ${req.body[`coordinators[${coordinatorIndex - 1}][email]`]}`);
                     }
-                } else {
-                    console.warn(`Unexpected fieldname format for coordinator: ${fieldName}`);
                 }
-            } else {
-                console.warn(`Unknown fieldname: ${fieldName}`);
             }
         });
 
@@ -534,122 +511,61 @@ app.post('/addtrips', upload.any(), async (req, res) => {
                 userName, createdAt
             ];
 
-            console.log('Inserting Trip Values:', tripValues);
-
             const [result] = await connection.query(insertTripSQL, tripValues);
             const trip_id = result.insertId;
 
             console.log('Inserted Trip ID:', trip_id);
 
-            // Insert additional pickup points
-            if (Array.isArray(additionalPickUpPoints)) {
-                const insertPickUpPointSQL = `
-                    INSERT INTO pickuppoints (trip_id, pickuppoint, time)
-                    VALUES (?, ?, ?)
-                `;
-                
-                for (const pointArray of additionalPickUpPoints) {
-                    console.log("Point object array:", pointArray);
-                
-                    // Check if pointArray is a string, parse only if it is a string
-                    let points;
-                    if (typeof pointArray === 'string') {
-                        try {
-                            points = JSON.parse(pointArray);
-                        } catch (err) {
-                            console.error('Failed to parse pointArray:', err);
-                            continue; // Skip to the next iteration if parsing fails
-                        }
-                    } else {
-                        points = pointArray; // If it's already an array/object, use it directly
-                    }
-                
-                    for (const point of points) {
-                        console.log("Individual point object:", point);
-                
-                        // Validate the data
-                        const pickUpPoint = point.pickUpPoint;
-                        const time = point.time;
-                
-                        // Log the values that will be inserted
-                        console.log('Inserting Pick Up Point Values:', [trip_id, pickUpPoint, time]);
-                
-                        // Check if any of the values are null and handle them
-                        if (pickUpPoint === null || time === null) {
-                            console.error('Invalid data:', { pickUpPoint, time });
-                            continue; // Skip this iteration
-                        }
-                
-                        // Insert into the database
-                        try {
-                            await connection.query(insertPickUpPointSQL, [trip_id, pickUpPoint, time]);
-                            console.log('Inserted pickup point:', { trip_id, pickUpPoint, time });
-                        } catch (err) {
-                            console.error('Error inserting pickup point:', err);
-                        }
-                    }
-                }
-                
-            } else {
-                console.error('additionalPickUpPoints is not an array:', additionalPickUpPoints);
-            }
-            
-
+            // Insert trip image into `images` table
             if (tripImagePath) {
-                await insertImage(connection, trip_id, tripImagePath, 'trip_image');
+                const insertImageSQL = `
+                    INSERT INTO images (trip_id, file_path)
+                    VALUES (?, ?)
+                `;
+                await connection.query(insertImageSQL, [trip_id, tripImagePath]);
                 console.log(`Inserted trip image with path: ${tripImagePath}`);
             }
 
-            await updateAdditionalImages(connection, trip_id, additionalImages);
-            console.log('Updated additional images:', additionalImages);
+            // Insert additional images into `additionalimages` table
+            const insertAdditionalImagesSQL = `
+                INSERT INTO additionalimages (trip_id, additional_images)
+                VALUES (?, ?)
+            `;
+            for (const [key, imagePath] of Object.entries(additionalImages)) {
+                await connection.query(insertAdditionalImagesSQL, [trip_id, imagePath]);
+                console.log(`Inserted additional image with path: ${imagePath}`);
+            }
 
             const itineraryData = Array.isArray(itinerary) ? itinerary : JSON.parse(itinerary);
-            console.log('Itinerary Data:', itineraryData);
 
             const insertItinerarySQL = `
                 INSERT INTO tripitenary (
                     TRIP_NAME, TRIP_CODE, TRIP_ID, DAY, DATE, DAY_TITLE, DAY_DESCRIPTION, DAY_IMG
                 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             `;
-
             for (const day of itineraryData) {
                 const dayIndex = parseInt(day.DAY.replace('Day ', ''), 10) - 1;
                 const itineraryValues = [
                     trip_name, trip_code, trip_id, dayIndex + 1, day.DATE, day.DAY_TITLE, day.DAY_DESCRIPTION,
                     imagesMap[dayIndex] || null
                 ];
-                console.log('Inserting Itinerary Values:', itineraryValues);
-
-                try {
-                    await connection.query(insertItinerarySQL, itineraryValues);
-                    console.log(`Inserted itinerary data for day ${dayIndex + 1}`);
-                } catch (err) {
-                    console.error(`Error inserting itinerary data for day ${dayIndex + 1}:`, err);
-                }
+                await connection.query(insertItinerarySQL, itineraryValues);
             }
 
             const insertCoordinatorSQL = `
                 INSERT INTO tripcoordinators (trip_id, cordinator_id, image, name, role, email)
                 VALUES (?, ?, ?, ?, ?, ?)
             `;
-
             for (const coordinator of coordinators) {
                 const coordinatorValues = [
                     trip_id, coordinator.cordinator_id || null, coordinatorImages[coordinator.cordinator_id]?.image || null,
                     coordinator.name || null, coordinator.role || null, coordinator.email || null
                 ];
-                console.log('Inserting Coordinator Values:', coordinatorValues);
-
-                try {
-                    await connection.query(insertCoordinatorSQL, coordinatorValues);
-                    console.log(`Inserted coordinator data`);
-                } catch (err) {
-                    console.error(`Error inserting coordinator data:`, err);
-                }
+                await connection.query(insertCoordinatorSQL, coordinatorValues);
             }
 
             await connection.commit();
-            res.json({ message: 'Trip and itinerary data inserted successfully!' });
+            res.json({ message: 'Trip, images, and itinerary data inserted successfully!' });
         } catch (error) {
             if (connection) await connection.rollback();
             console.error('Transaction error:', error);
@@ -662,12 +578,6 @@ app.post('/addtrips', upload.any(), async (req, res) => {
         res.status(500).json({ error: 'Failed to process request' });
     }
 });
-
-
-
-
-
-
 
 
 
