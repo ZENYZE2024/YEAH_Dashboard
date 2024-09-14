@@ -1065,32 +1065,38 @@ app.delete('/carousalsdelete/:id', async (req, res) => {
         if (connection) connection.release();
     }
 });
-
-app.put('/update-coordinator/:trip_id/:cordinator_id', async (req, res) => {
+app.put('/update-coordinator/:trip_id/:coordinator_id', async (req, res) => {
     const trip_id = req.params.trip_id;
-    const cordinator_id = req.params.cordinator_id;
+    const cordinator_id = req.params.coordinator_id;
     const { name, role, email, link, profile_mode } = req.body;
 
-    const connection = await pool.getConnection();
+    console.log(req.params);
 
-    const query = `
-        UPDATE tripcoordinators 
-        SET name = ?, role = ?, email = ?, link = ?, profile_mode = ? 
-        WHERE trip_id = ? AND cordinator_id = ?`;
+    let connection;
+    try {
+        connection = await pool.getConnection();
 
-    connection.query(query, [name, role, email, link, profile_mode, trip_id, cordinator_id], (err, result) => {
-        if (err) {
-            console.error('Error updating coordinator:', err);
-            res.status(500).json({ error: 'Failed to update coordinator' });
+        const query = `
+            UPDATE tripcoordinators 
+            SET name = ?, role = ?, email = ?, link = ?, profile_mode = ? 
+            WHERE trip_id = ? AND cordinator_id = ?`;
+
+        const [result] = await connection.query(query, [name, role, email, link, profile_mode, trip_id, cordinator_id]);
+
+        if (result.affectedRows > 0) {
+            console.log(result)
+            res.status(200).json({ message: 'Coordinator updated successfully' });
         } else {
-            if (result.affectedRows > 0) {
-                res.status(200).json({ message: 'Coordinator updated successfully' });
-            } else {
-                res.status(404).json({ message: 'Coordinator not found for the given trip_id and cordinator_id' });
-            }
+            res.status(404).json({ message: 'Coordinator not found for the given trip_id and coordinator_id' });
         }
-    });
+    } catch (error) {
+        console.error('Error updating coordinator:', error);
+        res.status(500).json({ error: 'Failed to update coordinator' });
+    } finally {
+        if (connection) connection.release(); // Ensure the connection is released
+    }
 });
+
 
 app.put('/update-cancellation-policy/:policyId', async (req, res) => {
     const policyId = req.params.policyId;
