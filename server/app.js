@@ -307,6 +307,37 @@ app.get('/tripitenary/:trip_id', async (req, res) => {
 });
 
 
+app.get('/cancellationpolicies/:trip_id', async (req, res) => {
+    const trip_id = req.params.trip_id;
+
+    if (!trip_id) {
+        return res.status(400).json({ error: 'trip_id is required' });
+    }
+
+    let connection;
+    try {
+        connection = await pool.getConnection();
+        const [rows] = await connection.query(
+            `SELECT * 
+             FROM cancellationpolicies
+             WHERE trip_id = ?`,
+            [trip_id]
+        );
+
+        if (rows.length === 0) {
+            return res.status(404).json({ error: 'Cancellation policies not found' });
+        }
+
+        res.json(rows);
+    } catch (error) {
+        console.error('Error fetching cancellation policies:', error);
+        res.status(500).json({ error: 'An internal server error occurred' });
+    } finally {
+        if (connection) connection.release();
+    }
+});
+
+
 app.put('/updatetrip', async (req, res) => {
     const tripDetails = req.body;
 
@@ -401,7 +432,8 @@ app.post('/addtrips', upload.any(), async (req, res) => {
             trip_name, trip_code, cost, seats, trip_start_date_formatted, end_date_formatted,
             trip_start_point, trip_end_point, destination, trip_duration,
             traveller_type, inclusion, exclusion, points_to_note, trip_type,
-            itinerary, trip_description, googlemap, whatsapplink, userId, coordinators
+            itinerary, trip_description, googlemap, whatsapplink, userId, coordinators,
+            cancellationPolicies,cancellationType 
         } = req.body;
         const trip_start_date = trip_start_date_formatted;
         const end_date = end_date_formatted;
@@ -536,6 +568,7 @@ app.post('/addtrips', upload.any(), async (req, res) => {
                 console.log(`Inserted additional image with path: ${imagePath}`);
             }
 
+            // Insert itinerary data into `tripitenary` table
             const itineraryData = Array.isArray(itinerary) ? itinerary : JSON.parse(itinerary);
 
             const insertItinerarySQL = `
@@ -552,20 +585,56 @@ app.post('/addtrips', upload.any(), async (req, res) => {
                 await connection.query(insertItinerarySQL, itineraryValues);
             }
 
+            // Insert coordinator data into `tripcoordinators` table
             const insertCoordinatorSQL = `
-                INSERT INTO tripcoordinators (trip_id, cordinator_id, image, name, role, email)
-                VALUES (?, ?, ?, ?, ?, ?)
+                INSERT INTO tripcoordinators (trip_id, cordinator_id, image, name, role, email,link,profile_mode)
+                VALUES (?, ?, ?, ?, ?, ?,?,?)
             `;
             for (const coordinator of coordinators) {
                 const coordinatorValues = [
                     trip_id, coordinator.cordinator_id || null, coordinatorImages[coordinator.cordinator_id]?.image || null,
-                    coordinator.name || null, coordinator.role || null, coordinator.email || null
+                    coordinator.name || null, coordinator.role || null, coordinator.email || null,coordinator.link || null,coordinator.profile_mode || null
                 ];
                 await connection.query(insertCoordinatorSQL, coordinatorValues);
             }
 
+            let processedPolicies = [];
+            cancellationPolicies.forEach(policy => {
+                if (typeof policy === 'string') {
+                    if (policy.startsWith('[object Object]')) {
+                        console.warn('Ignoring invalid cancellation policy:', policy);
+                    } else {
+                        try {
+                            const parsedPolicies = JSON.parse(policy);
+                            if (Array.isArray(parsedPolicies)) {
+                                processedPolicies = processedPolicies.concat(parsedPolicies);
+                            }
+                        } catch (err) {
+                            console.error('Error parsing JSON string:', policy);
+                        }
+                    }
+                }
+            });
+            
+            console.log('Processed Cancellation Policies:', processedPolicies);
+            
+            const insertCancellationPolicySQL = `
+            INSERT INTO cancellationpolicies (policy_startdate, policy_endDate, fee, trip_id, cancellationType)
+            VALUES (?, ?, ?, ?, ?)
+        `;
+        
+            
+        for (const policy of processedPolicies) {
+            const cancellationPolicyValues = [
+                policy.startDay, policy.endDay, policy.fee, trip_id, cancellationType 
+            ];
+            await connection.query(insertCancellationPolicySQL, cancellationPolicyValues);
+        }
+            
+            console.log('Inserted cancellation policies');
+
             await connection.commit();
-            res.json({ message: 'Trip, images, and itinerary data inserted successfully!' });
+            res.json({ message: 'Trip, images, itinerary data, and cancellation policies inserted successfully!' });
         } catch (error) {
             if (connection) await connection.rollback();
             console.error('Transaction error:', error);
@@ -574,10 +643,12 @@ app.post('/addtrips', upload.any(), async (req, res) => {
             if (connection) connection.release();
         }
     } catch (err) {
-        console.error('Error processing request:', err);
-        res.status(500).json({ error: 'Failed to process request' });
+        console.error('Error in /addtrips route:', err);
+        res.status(500).json({ error: 'Internal server error' });
     }
 });
+
+
 
 
 
@@ -706,6 +777,24 @@ app.get('/cancellations/:trip_id', async (req, res) => {
         res.status(500).json({ error: 'Database connection failed' });
     }
 })
+
+app.get('/getcoordinatordetails/:trip_id', async (req, res) => {
+    const  trip_id  = req.params.trip_id;
+    console.log(req)
+    if (!trip_id) {
+        return res.status(400).send('trip_id is required');
+    }
+
+    try {
+        const [rows] = await pool.query('SELECT * FROM tripcoordinators WHERE trip_id = ?', [trip_id]);
+        res.json(rows);
+        console.log(rows)
+    } catch (err) {
+        console.error(err);
+        res.status(500).send('Server error');
+    }
+});
+
 
 
 app.get('/supervisordashboard', async (req, res) => {
@@ -977,7 +1066,65 @@ app.delete('/carousalsdelete/:id', async (req, res) => {
     }
 });
 
+app.put('/update-coordinator/:trip_id/:cordinator_id', async (req, res) => {
+    const trip_id = req.params.trip_id;
+    const cordinator_id = req.params.cordinator_id;
+    const { name, role, email, link, profile_mode } = req.body;
 
+    const connection = await pool.getConnection();
+
+    const query = `
+        UPDATE tripcoordinators 
+        SET name = ?, role = ?, email = ?, link = ?, profile_mode = ? 
+        WHERE trip_id = ? AND cordinator_id = ?`;
+
+    connection.query(query, [name, role, email, link, profile_mode, trip_id, cordinator_id], (err, result) => {
+        if (err) {
+            console.error('Error updating coordinator:', err);
+            res.status(500).json({ error: 'Failed to update coordinator' });
+        } else {
+            if (result.affectedRows > 0) {
+                res.status(200).json({ message: 'Coordinator updated successfully' });
+            } else {
+                res.status(404).json({ message: 'Coordinator not found for the given trip_id and cordinator_id' });
+            }
+        }
+    });
+});
+
+app.put('/update-cancellation-policy/:policyId', async (req, res) => {
+    const policyId = req.params.policyId;
+    const { trip_id, policy_startdate, policy_endDate, fee, cancellationType } = req.body;
+
+    console.log("body",req.body); // Debugging: Check the request body
+
+    // Validate request body
+    if (!policyId || !trip_id || !policy_startdate || !policy_endDate || fee === undefined || !cancellationType) {
+        return res.status(400).json({ error: 'All fields are required' });
+    }
+
+    let connection;
+    try {
+        connection = await pool.getConnection();
+        const query = `
+            UPDATE cancellationpolicies 
+            SET policy_startdate = ?, policy_endDate = ?, fee = ?, cancellationType = ?
+            WHERE id = ? AND trip_id = ?`;
+
+        const [result] = await connection.query(query, [policy_startdate, policy_endDate, fee, cancellationType, policyId, trip_id]);
+
+        if (result.affectedRows > 0) {
+            res.status(200).json({ message: 'Cancellation policy updated successfully' });
+        } else {
+            res.status(404).json({ message: 'Cancellation policy not found or trip_id does not match' });
+        }
+    } catch (error) {
+        console.error('Error updating cancellation policy:', error);
+        res.status(500).json({ error: 'An internal server error occurred' });
+    } finally {
+        if (connection) connection.release(); // Ensure connection is released
+    }
+});
 
 
 
