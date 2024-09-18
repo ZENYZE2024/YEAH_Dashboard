@@ -133,8 +133,11 @@ const pool = mysql.createPool({
 //     };
 // };
 
-app.post('/adduser', async (req, res) => {
-    const { email, password, role } = req.body;
+app.post('/adduser', upload.single('image'), async (req, res) => {
+    const { email, password, role, name, link, profile_mode } = req.body;
+    // Include the upload directory in the path
+    const profileImage = req.file ? `\\uploads\\${req.file.filename}` : null; // Adjust path based on your setup
+    console.log(req.body);
 
     try {
         const saltRounds = 10;
@@ -159,8 +162,8 @@ app.post('/adduser', async (req, res) => {
         }
 
         const [result] = await connection.execute(
-            'INSERT INTO tripusers (email, password, role) VALUES (?, ?, ?)',
-            [email, hashedPassword, role]
+            'INSERT INTO tripusers (email, password, role, profile_image, name, link, profile_mode) VALUES (?, ?, ?, ?, ?, ?, ?)',
+            [email, hashedPassword, role, profileImage, name, link, profile_mode]
         );
 
         await connection.release();
@@ -171,6 +174,7 @@ app.post('/adduser', async (req, res) => {
         res.status(500).json({ message: 'Error adding user' });
     }
 });
+
 
 app.post('/userlogin', async (req, res) => {
     const { email, password } = req.body;
@@ -298,6 +302,7 @@ app.get('/tripitenary/:trip_id', async (req, res) => {
         }
 
         res.json(rows);
+        console.log(rows)
     } catch (error) {
         console.error('Error fetching trip itinerary data:', error);
         res.status(500).json({ error: 'An internal server error occurred' });
@@ -337,17 +342,23 @@ app.get('/cancellationpolicies/:trip_id', async (req, res) => {
     }
 });
 
-
-app.put('/updatetrip', async (req, res) => {
+app.put('/updatetrip', upload.single('trip_image'), async (req, res) => {
     const tripDetails = req.body;
-
+    const trip_id = tripDetails.trip_id;
+    console.log(trip_id)
+    console.log(req.body)
     try {
+        // Establish database connection
         const connection = await pool.getConnection();
+
         try {
+            // Start the transaction
             await connection.beginTransaction();
 
-            const { trip_id, file_path, ...updateFields } = tripDetails;
+            // Destructure to exclude file_path and trip_id from updateFields
+            const { file_path, ...updateFields } = tripDetails;
 
+            // Update the trip data if there are fields to update
             const setClause = Object.keys(updateFields)
                 .map(key => `${key} = ?`)
                 .join(', ');
@@ -355,67 +366,97 @@ app.put('/updatetrip', async (req, res) => {
             if (setClause) {
                 const sqlUpdate = `UPDATE tripdata SET ${setClause} WHERE trip_id = ?`;
                 const valuesUpdate = [...Object.values(updateFields), trip_id];
-
                 await connection.query(sqlUpdate, valuesUpdate);
             }
 
-            if (file_path) {
+            // Handle the image file update if a new file is uploaded
+            if (req.file) {
+                const newFilePath = `/uploads/${req.file.filename}`; // Construct new file path
+
                 const [rows] = await connection.query('SELECT * FROM images WHERE trip_id = ?', [trip_id]);
+                console.log(newFilePath)
 
                 let sql;
                 let values;
 
                 if (rows.length > 0) {
+                    // Update existing image entry if it exists
                     sql = 'UPDATE images SET file_path = ? WHERE trip_id = ?';
-                    values = [file_path, trip_id];
+                    values = [newFilePath, trip_id];
+                    console.log("image upodated")
                 } else {
+                    // Insert new image entry if no previous entry exists
                     sql = 'INSERT INTO images (trip_id, file_path) VALUES (?, ?)';
-                    values = [trip_id, file_path];
+                    values = [trip_id, newFilePath];
                 }
 
                 await connection.query(sql, values);
             }
 
+            // Commit the transaction if everything is successful
             await connection.commit();
-            res.json({ message: 'Trip details updated and file path saved successfully!' });
+            res.json({ message: 'Trip details and image file updated successfully!' });
+
         } catch (err) {
+            // Rollback the transaction if an error occurs
             await connection.rollback();
-            console.error('Error updating trip details or inserting file path:', err);
-            res.status(500).json({ error: 'Failed to update trip details or insert file path' });
+            console.error('Transaction Error:', err);
+            res.status(500).json({ error: 'Failed to update trip details or image.' });
         } finally {
+            // Release the connection back to the pool
             connection.release();
         }
+
     } catch (err) {
-        console.error('Error connecting to the database:', err);
-        res.status(500).json({ error: 'Database connection failed' });
+        // Log connection errors
+        console.error('Database Connection Error:', err);
+        res.status(500).json({ error: 'Database connection failed.' });
     }
 });
 
+app.put('/updatetinerary/:dayIndex', upload.single('image'), async (req, res) => {
+    const dayIndex = parseInt(req.params.dayIndex, 10);  // Get the specific day index from the route and parse to integer
+    const { DATE, DAY_TITLE, DAY_DESCRIPTION, TRIP_ID, DAY } = req.body;
+    const imageFile = req.file; // Access the uploaded image, if present
 
+    // Log the request body and image file details
+    console.log('Request Body:', req.body);
+    console.log('Uploaded Image File:', imageFile);
 
+    // Build the SQL update data
+    const updateData = {
+        DATE,
+        DAY_TITLE,
+        DAY_DESCRIPTION,
+        DAY_IMG: imageFile ? `/uploads/${imageFile.filename}` : undefined  // Use new image if uploaded
+    };
 
-app.put('/updatetinerary', async (req, res) => {
-    const tripItinerary = req.body;
+    // Filter out undefined fields (e.g., when no new image is uploaded)
+    Object.keys(updateData).forEach(key => updateData[key] === undefined && delete updateData[key]);
+
+    // Log the SQL update data and parameters
+    console.log('Update Data:', updateData);
+    console.log('TRIP_ID:', TRIP_ID);
+    console.log('Day Index:', dayIndex);
+
     try {
         const connection = await pool.getConnection();
         try {
             await connection.beginTransaction();
 
-            const updatePromises = tripItinerary.map(async (item) => {
-                const { TRIP_ID, DAY, DATE, ...rest } = item;
+            // Update the specific day in the database
+            const sql = 'UPDATE tripitenary SET ? WHERE TRIP_ID = ? AND DAY = ?';
+            const [result] = await connection.query(sql, [updateData, TRIP_ID, DAY]);
 
-                const sql = 'UPDATE tripitenary SET ? WHERE TRIP_ID = ? AND DAY = ?';
-                await connection.query(sql, [{ ...rest, DATE }, TRIP_ID, DAY]);
-            });
-
-            await Promise.all(updatePromises);
+            // Log the result of the query
+            console.log('Query Result:', result);
 
             await connection.commit();
-            res.json({ message: 'Trip itinerary updated successfully!' });
+            res.json({ message: 'Itinerary day updated successfully!' });
         } catch (err) {
             await connection.rollback();
-            console.error('Error updating trip itinerary:', err);
-            res.status(500).json({ error: 'Failed to update trip itinerary' });
+            console.error('Error updating itinerary day:', err);
+            res.status(500).json({ error: 'Failed to update itinerary day' });
         } finally {
             connection.release();
         }
@@ -424,16 +465,17 @@ app.put('/updatetinerary', async (req, res) => {
         res.status(500).json({ error: 'Database connection failed' });
     }
 });
+
+
 app.post('/addtrips', upload.any(), async (req, res) => {
     console.log('Request Body:', req.body);
-
     try {
         const {
             trip_name, trip_code, cost, seats, trip_start_date_formatted, end_date_formatted,
             trip_start_point, trip_end_point, destination, trip_duration,
             traveller_type, inclusion, exclusion, points_to_note, trip_type,
             itinerary, trip_description, googlemap, whatsapplink, userId, coordinators,
-            cancellationPolicies,cancellationType 
+            cancellationPolicies, cancellationType
         } = req.body;
         const trip_start_date = trip_start_date_formatted;
         const end_date = end_date_formatted;
@@ -466,7 +508,7 @@ app.post('/addtrips', upload.any(), async (req, res) => {
         console.log("Parsed additional pick-up points:", additionalPickUpPoints);
 
         files.forEach(file => {
-            const filePath = `\\uploads\\${file.filename}`; 
+            const filePath = `\\uploads\\${file.filename}`;
             const fieldName = file.fieldname;
 
             if (fieldName.startsWith('trip_images')) {
@@ -593,7 +635,7 @@ app.post('/addtrips', upload.any(), async (req, res) => {
             for (const coordinator of coordinators) {
                 const coordinatorValues = [
                     trip_id, coordinator.cordinator_id || null, coordinatorImages[coordinator.cordinator_id]?.image || null,
-                    coordinator.name || null, coordinator.role || null, coordinator.email || null,coordinator.link || null,coordinator.profile_mode || null
+                    coordinator.name || null, coordinator.role || null, coordinator.email || null, coordinator.link || null, coordinator.profile_mode || null
                 ];
                 await connection.query(insertCoordinatorSQL, coordinatorValues);
             }
@@ -615,22 +657,22 @@ app.post('/addtrips', upload.any(), async (req, res) => {
                     }
                 }
             });
-            
+
             console.log('Processed Cancellation Policies:', processedPolicies);
-            
+
             const insertCancellationPolicySQL = `
             INSERT INTO cancellationpolicies (policy_startdate, policy_endDate, fee, trip_id, cancellationType)
             VALUES (?, ?, ?, ?, ?)
         `;
-        
-            
-        for (const policy of processedPolicies) {
-            const cancellationPolicyValues = [
-                policy.startDay, policy.endDay, policy.fee, trip_id, cancellationType 
-            ];
-            await connection.query(insertCancellationPolicySQL, cancellationPolicyValues);
-        }
-            
+
+
+            for (const policy of processedPolicies) {
+                const cancellationPolicyValues = [
+                    policy.startDay, policy.endDay, policy.fee, trip_id, cancellationType
+                ];
+                await connection.query(insertCancellationPolicySQL, cancellationPolicyValues);
+            }
+
             console.log('Inserted cancellation policies');
 
             await connection.commit();
@@ -647,6 +689,8 @@ app.post('/addtrips', upload.any(), async (req, res) => {
         res.status(500).json({ error: 'Internal server error' });
     }
 });
+
+
 
 
 
@@ -779,7 +823,7 @@ app.get('/cancellations/:trip_id', async (req, res) => {
 })
 
 app.get('/getcoordinatordetails/:trip_id', async (req, res) => {
-    const  trip_id  = req.params.trip_id;
+    const trip_id = req.params.trip_id;
     console.log(req)
     if (!trip_id) {
         return res.status(400).send('trip_id is required');
@@ -924,9 +968,9 @@ app.get('/gettheinformationsincorousals', async (req, res) => {
     let connection;
     try {
         connection = await pool.getConnection();
-        
+
         const [rows] = await connection.query('SELECT * FROM tripcarousals');
-        
+
         res.json(rows);
     } catch (err) {
         console.error('Error fetching carousals:', err);
@@ -939,7 +983,7 @@ app.get('/gettheinformationsincorousals', async (req, res) => {
 app.delete('/carousaldatasdelete/:id', async (req, res) => {
     const { id } = req.params;
     const connection = await pool.getConnection();
-    
+
     try {
         // Check if the carousal exists
         const [rows] = await connection.query('SELECT * FROM tripcarousals WHERE id = ?', [id]);
@@ -1049,7 +1093,7 @@ app.delete('/carousalsdelete/:id', async (req, res) => {
 
     try {
         connection = await pool.getConnection();
-        
+
         const deleteQuery = 'DELETE FROM carousals WHERE id = ?';
         const [result] = await connection.query(deleteQuery, [carousalId]);
 
@@ -1065,26 +1109,26 @@ app.delete('/carousalsdelete/:id', async (req, res) => {
         if (connection) connection.release();
     }
 });
-app.put('/update-coordinator/:trip_id/:coordinator_id', async (req, res) => {
+app.put('/update-coordinator/:trip_id/:coordinator_id', upload.single('image'), async (req, res) => {
     const trip_id = req.params.trip_id;
     const cordinator_id = req.params.coordinator_id;
     const { name, role, email, link, profile_mode } = req.body;
-
-    console.log(req.params);
+    const image = req.file ? `\\uploads\\${req.file.filename}` : null;
+    console.log("Image URL:", image);
 
     let connection;
     try {
         connection = await pool.getConnection();
 
+        // Query to update coordinator details
         const query = `
             UPDATE tripcoordinators 
-            SET name = ?, role = ?, email = ?, link = ?, profile_mode = ? 
+            SET name = ?, role = ?, email = ?, link = ?, profile_mode = ?, image = ? 
             WHERE trip_id = ? AND cordinator_id = ?`;
 
-        const [result] = await connection.query(query, [name, role, email, link, profile_mode, trip_id, cordinator_id]);
+        const [result] = await connection.query(query, [name, role, email, link, profile_mode, image, trip_id, cordinator_id]);
 
         if (result.affectedRows > 0) {
-            console.log(result)
             res.status(200).json({ message: 'Coordinator updated successfully' });
         } else {
             res.status(404).json({ message: 'Coordinator not found for the given trip_id and coordinator_id' });
@@ -1098,11 +1142,12 @@ app.put('/update-coordinator/:trip_id/:coordinator_id', async (req, res) => {
 });
 
 
+
 app.put('/update-cancellation-policy/:policyId', async (req, res) => {
     const policyId = req.params.policyId;
     const { trip_id, policy_startdate, policy_endDate, fee, cancellationType } = req.body;
 
-    console.log("body",req.body); // Debugging: Check the request body
+    console.log("body", req.body); // Debugging: Check the request body
 
     // Validate request body
     if (!policyId || !trip_id || !policy_startdate || !policy_endDate || fee === undefined || !cancellationType) {
@@ -1129,6 +1174,90 @@ app.put('/update-cancellation-policy/:policyId', async (req, res) => {
         res.status(500).json({ error: 'An internal server error occurred' });
     } finally {
         if (connection) connection.release(); // Ensure connection is released
+    }
+});
+
+app.post('/whatsapp-links', async (req, res) => {
+    const { link } = req.body;
+    if (!link) {
+        return res.status(400).json({ error: 'Link is required' });
+    }
+
+    const connection = await pool.getConnection();
+    try {
+        const [result] = await connection.query('INSERT INTO communitywhatsapp (link) VALUES (?)', [link]);
+        res.status(201).json({ id: result.insertId, link });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    } finally {
+        connection.release();
+    }
+});
+
+app.get('/getwhatsapp-links', async (req, res) => {
+    const connection = await pool.getConnection();
+    try {
+        const [rows] = await connection.query('SELECT * FROM communitywhatsapp');
+        res.status(200).json(rows);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    } finally {
+        connection.release();
+    }
+});
+
+app.put('/updatewhatsapp-links/:id', async (req, res) => {
+    const { id } = req.params;
+    const { link } = req.body;
+    let connection;
+    try {
+        if (!id || !link) {
+            return res.status(400).send('Missing id or link');
+        }
+
+        connection = await pool.getConnection();
+        const [result] = await connection.query('UPDATE communitywhatsapp SET link = ? WHERE id = ?', [link, id]);
+
+        if (result.affectedRows === 0) {
+            return res.status(404).send('Link not found');
+        }
+
+        res.json({ id, link });
+    } catch (err) {
+        console.error('Error updating WhatsApp community link:', err);
+        res.status(500).send('Error updating WhatsApp community link');
+    } finally {
+        if (connection) connection.release(); // Always release the connection back to the pool
+    }
+});
+
+app.delete('/whatsapp-links/:id', async (req, res) => {
+    const { id } = req.params;
+    const connection = await pool.getConnection();
+
+    try {
+        await connection.query('DELETE FROM communitywhatsapp WHERE id = ?', [id]);
+        res.status(200).send('Link deleted successfully');
+    } catch (err) {
+        console.error('Error deleting link:', err);
+        res.status(500).send('Error deleting link');
+    } finally {
+        connection.release();
+    }
+});
+
+app.get('/getthecoordinators', async (req, res) => {
+    const connection = await pool.getConnection();
+
+    try {
+        const [rows] = await connection.query('SELECT * FROM tripusers');
+
+        res.status(200).json(rows);
+    } catch (error) {
+        console.error('Error fetching coordinators:', error);
+        res.status(500).json({ message: 'Error fetching coordinators' });
+    } finally {
+        connection.release();
     }
 });
 

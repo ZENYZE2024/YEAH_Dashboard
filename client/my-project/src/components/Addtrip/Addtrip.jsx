@@ -5,6 +5,7 @@ import 'react-datepicker/dist/react-datepicker.css';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 import { format, differenceInDays, addDays } from 'date-fns';
+import Navbar from '../navbar/navbar';
 
 function Addtripdetails() {
     const [formData, setFormData] = useState({
@@ -26,14 +27,22 @@ function Addtripdetails() {
         trip_description: '',
         googlemap: '',
         whatsapplink: '',
-        additionalPickUpPoints: [{ pickUpPoint: '', time: '12:00 AM' }]
+        additionalPickUpPoints: [{ pickUpPoint: '', time: '12:00 AM' }],
+        cancellationType: 'percentage',
+        cancellationPolicies: [
+            {
+                startDay: '',
+                endDay: '',
+                fee: '',
+            }
+        ],
     });
 
     const [days, setDays] = useState([]);
     const [tripImages, setTripImages] = useState([]);
     const [additionalImages, setAdditionalImages] = useState([]);
     const [additionalImageInputs, setAdditionalImageInputs] = useState([{ id: Date.now() }]);
-    const [coordinators, setCoordinators] = useState([{ name: '', role: '', email: '', cordinator_id: '', image: null }]);
+    const [coordinators, setCoordinators] = useState([{ name: '', role: '', email: '', cordinator_id: '', image: null, link: '', profile_mode: '' }]);
 
 
     useEffect(() => {
@@ -102,6 +111,9 @@ function Addtripdetails() {
             form.append(`coordinators[${i}][role]`, coordinator.role);
             form.append(`coordinators[${i}][email]`, coordinator.email);
             form.append(`coordinators[${i}][cordinator_id]`, coordinator.cordinator_id);
+            form.append(`coordinators[${i}][link]`, coordinator.link);
+            form.append(`coordinators[${i}][profile_mode]`, coordinator.profile_mode);
+
 
             if (coordinator.image) {
                 form.append(`coordinators[${i}][image]`, coordinator.image);
@@ -116,9 +128,10 @@ function Addtripdetails() {
 
 
         try {
-            console.log(formData.additionalPickUpPoints);
+            console.log(formData);
             form.append('additionalPickUpPoints', JSON.stringify(formData.additionalPickUpPoints));
-                        const response = await axios.post('https://admin.yeahtrips.in/addtrips', form, {
+            form.append('cancellationPolicies', JSON.stringify(formData.cancellationPolicies));
+            const response = await axios.post('https://admin.yeahtrips.in/addtrips', form, {
                 headers: {
                     'Content-Type': 'multipart/form-data',
                 },
@@ -195,25 +208,34 @@ function Addtripdetails() {
 
     const handleCoordinatorChange = (index, e) => {
         const { name, value } = e.target;
-        const updatedCoordinators = [...coordinators];
-        updatedCoordinators[index][name] = value;
-        setCoordinators(updatedCoordinators);
+        setCoordinators(prevCoordinators => {
+            const updatedCoordinators = [...prevCoordinators];
+            updatedCoordinators[index] = { ...updatedCoordinators[index], [name]: value };
+            return updatedCoordinators;
+        });
     };
 
     const handleCoordinatorFileChange = (index, e) => {
         const file = e.target.files[0];
-        const updatedCoordinators = [...coordinators];
-        updatedCoordinators[index].image = file;
-        setCoordinators(updatedCoordinators);
+        setCoordinators(prevCoordinators => {
+            const updatedCoordinators = [...prevCoordinators];
+            updatedCoordinators[index] = { ...updatedCoordinators[index], image: file };
+            return updatedCoordinators;
+        });
     };
 
+
     const addCoordinator = () => {
-        setCoordinators([...coordinators, { name: '', role: '', email: '', image: null, cordinator_id: '' }]);
+        setCoordinators(prevCoordinators => [
+            ...prevCoordinators,
+            { name: '', role: '', email: '', cordinator_id: '', image: null, link: '', profile_mode: '' }
+        ]);
     };
 
     const removeCoordinator = (index) => {
-        const updatedCoordinators = coordinators.filter((_, i) => i !== index);
-        setCoordinators(updatedCoordinators);
+        setCoordinators(prevCoordinators =>
+            prevCoordinators.filter((_, i) => i !== index)
+        );
     };
 
     const handleFormFieldChange = (e) => {
@@ -262,8 +284,48 @@ function Addtripdetails() {
         if (period === 'AM' && adjustedHours === 12) adjustedHours = 0;
         return `${String(adjustedHours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
     };
+
+
+    const handleCancellationTypeChange = (e) => {
+        setFormData({
+            ...formData,
+            cancellationType: e.target.value,
+        });
+    };
+
+    const handlePolicyChange = (index, field, value) => {
+        const updatedPolicies = [...formData.cancellationPolicies];
+        updatedPolicies[index][field] = value;
+        setFormData({
+            ...formData,
+            cancellationPolicies: updatedPolicies,
+        });
+    };
+
+    const handleAddPolicy = () => {
+        setFormData({
+            ...formData,
+            cancellationPolicies: [
+                ...formData.cancellationPolicies,
+                { startDay: '', endDay: '', fee: '' },
+            ],
+        });
+    };
+
+    const handleRemovePolicy = (index) => {
+        const updatedPolicies = [...formData.cancellationPolicies];
+        updatedPolicies.splice(index, 1);
+        setFormData({
+            ...formData,
+            cancellationPolicies: updatedPolicies,
+        });
+    };
     return (
-        <div className="p-6 max-w-3xl mx-auto bg-white rounded-lg shadow-md">
+        <div>
+            <div>
+                <Navbar/>
+            </div>
+            <div className="p-6 max-w-3xl mx-auto bg-white rounded-lg shadow-md">
             <h1 className="text-2xl font-semibold mb-6 text-gray-800">Add Trip Details</h1>
             <form onSubmit={handleSubmit} encType="multipart/form-data" className="space-y-6">
                 <div className="flex flex-col">
@@ -315,7 +377,7 @@ function Addtripdetails() {
                         className="border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 p-2"
                         required
                     />
-                    {formData.trip_start_date_formatted && <p>Formatted Date: {formData.trip_start_date_formatted}</p>}
+                    {formData.trip_start_date_formatted && <p>Start Date: {formData.trip_start_date_formatted}</p>}
                 </div>
                 <div className="flex flex-col">
                     <label className="text-sm font-medium text-gray-700 mb-1">End Date</label>
@@ -326,7 +388,7 @@ function Addtripdetails() {
                         className="border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 p-2"
                         required
                     />
-                    {formData.end_date_formatted && <p>Formatted End Date: {formData.end_date_formatted}</p>}
+                    {formData.end_date_formatted && <p> End Date: {formData.end_date_formatted}</p>}
                 </div>
 
                 <div className="flex flex-col">
@@ -430,68 +492,68 @@ function Addtripdetails() {
                     />
                 </div>
                 <div className="space-y-4">
-            <label className="text-sm font-medium text-gray-700">Additional Pickup Points</label>
-            {formData.additionalPickUpPoints.map((point, index) => {
-                const timeParts = point.time ? formatTimeTo12Hour(point.time).split(/[:\s]/) : ['12', '00', 'AM'];
-                return (
-                    <div key={index} className="flex space-x-4 mb-2">
-                        <input
-                            type="text"
-                            placeholder="Pickup Point"
-                            value={point.pickUpPoint}
-                            onChange={(e) => handleAdditionalPickUpPointChange(index, 'pickUpPoint', e.target.value)}
-                            className="border border-gray-300 rounded-md p-2 flex-1"
-                        />
-                        <div className="flex space-x-2 flex-1">
-                            <select
-                                value={timeParts[0]}
-                                onChange={(e) => handleAdditionalPickUpPointChange(index, 'time', `${e.target.value}:${timeParts[1]} ${timeParts[2]}`)}
-                                className="border border-gray-300 rounded-md p-2 flex-1"
-                            >
-                                {Array.from({ length: 12 }, (_, i) => i + 1).map(hour => (
-                                    <option key={hour} value={String(hour).padStart(2, '0')}>
-                                        {String(hour).padStart(2, '0')}
-                                    </option>
-                                ))}
-                            </select>
-                            <select
-                                value={timeParts[1]}
-                                onChange={(e) => handleAdditionalPickUpPointChange(index, 'time', `${timeParts[0]}:${e.target.value} ${timeParts[2]}`)}
-                                className="border border-gray-300 rounded-md p-2 flex-1"
-                            >
-                                {Array.from({ length: 60 }, (_, i) => i).map(minute => (
-                                    <option key={minute} value={String(minute).padStart(2, '0')}>
-                                        {String(minute).padStart(2, '0')}
-                                    </option>
-                                ))}
-                            </select>
-                            <select
-                                value={timeParts[2]}
-                                onChange={(e) => handleAdditionalPickUpPointChange(index, 'time', `${timeParts[0]}:${timeParts[1]} ${e.target.value}`)}
-                                className="border border-gray-300 rounded-md p-2 flex-1"
-                            >
-                                <option value="AM">AM</option>
-                                <option value="PM">PM</option>
-                            </select>
-                        </div>
-                        <button
-                            type="button"
-                            onClick={() => handleRemovePickUpPoint(index)}
-                            className="text-red-500"
-                        >
-                            Remove
-                        </button>
-                    </div>
-                );
-            })}
-            <button
-                type="button"
-                onClick={handleAddPickUpPoint}
-                className="mt-2 bg-blue-500 text-white p-2 rounded-md"
-            >
-                Add Pickup Point
-            </button>
-        </div>
+                    <label className="text-sm font-medium text-gray-700">Additional Pickup Points</label>
+                    {formData.additionalPickUpPoints.map((point, index) => {
+                        const timeParts = point.time ? formatTimeTo12Hour(point.time).split(/[:\s]/) : ['12', '00', 'AM'];
+                        return (
+                            <div key={index} className="flex space-x-4 mb-2">
+                                <input
+                                    type="text"
+                                    placeholder="Pickup Point"
+                                    value={point.pickUpPoint}
+                                    onChange={(e) => handleAdditionalPickUpPointChange(index, 'pickUpPoint', e.target.value)}
+                                    className="border border-gray-300 rounded-md p-2 flex-1"
+                                />
+                                <div className="flex space-x-2 flex-1">
+                                    <select
+                                        value={timeParts[0]}
+                                        onChange={(e) => handleAdditionalPickUpPointChange(index, 'time', `${e.target.value}:${timeParts[1]} ${timeParts[2]}`)}
+                                        className="border border-gray-300 rounded-md p-2 flex-1"
+                                    >
+                                        {Array.from({ length: 12 }, (_, i) => i + 1).map(hour => (
+                                            <option key={hour} value={String(hour).padStart(2, '0')}>
+                                                {String(hour).padStart(2, '0')}
+                                            </option>
+                                        ))}
+                                    </select>
+                                    <select
+                                        value={timeParts[1]}
+                                        onChange={(e) => handleAdditionalPickUpPointChange(index, 'time', `${timeParts[0]}:${e.target.value} ${timeParts[2]}`)}
+                                        className="border border-gray-300 rounded-md p-2 flex-1"
+                                    >
+                                        {Array.from({ length: 60 }, (_, i) => i).map(minute => (
+                                            <option key={minute} value={String(minute).padStart(2, '0')}>
+                                                {String(minute).padStart(2, '0')}
+                                            </option>
+                                        ))}
+                                    </select>
+                                    <select
+                                        value={timeParts[2]}
+                                        onChange={(e) => handleAdditionalPickUpPointChange(index, 'time', `${timeParts[0]}:${timeParts[1]} ${e.target.value}`)}
+                                        className="border border-gray-300 rounded-md p-2 flex-1"
+                                    >
+                                        <option value="AM">AM</option>
+                                        <option value="PM">PM</option>
+                                    </select>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={() => handleRemovePickUpPoint(index)}
+                                    className="text-red-500"
+                                >
+                                    Remove
+                                </button>
+                            </div>
+                        );
+                    })}
+                    <button
+                        type="button"
+                        onClick={handleAddPickUpPoint}
+                        className="mt-2 bg-blue-500 text-white p-2 rounded-md"
+                    >
+                        Add Pickup Point
+                    </button>
+                </div>
                 <div className="flex flex-col">
                     <label className="text-sm font-medium text-gray-700 mb-1">WhatsApp Link</label>
                     <input
@@ -601,84 +663,196 @@ function Addtripdetails() {
                         Add More Itinerary Days
                     </button>
                 </div>
-                <h3 className="text-2xl font-bold mb-4">Coordinators</h3>
-                {coordinators.map((coordinator, index) => (
-                    <div key={index} className="border p-4 rounded-lg mb-4 bg-white shadow-md">
-                        <div className="mb-4">
-                            <label htmlFor={`coordinatorName${index}`} className="block text-sm font-medium text-gray-700">Name:</label>
-                            <input
-                                type="text"
-                                id={`coordinatorName${index}`}
-                                name="name"
-                                value={coordinator.name}
-                                onChange={(e) => handleCoordinatorChange(index, e)}
-                                required
-                                className="border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 p-2"
-                            />
+                <div>
+                    <h3 className="text-2xl font-bold mb-4">Coordinators</h3>
+                    {coordinators.map((coordinator, index) => (
+                        <div key={index} className="border p-4 rounded-lg mb-4 bg-white shadow-md">
+                            <div className="mb-4">
+                                <label htmlFor={`coordinatorName${index}`} className="block text-sm font-medium text-gray-700">Name:</label>
+                                <input
+                                    type="text"
+                                    id={`coordinatorName${index}`}
+                                    name="name"
+                                    value={coordinator.name}
+                                    onChange={(e) => handleCoordinatorChange(index, e)}
+                                    required
+                                    className="border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 p-2"
+                                />
+                            </div>
+                            <div className="mb-4">
+                                <label htmlFor={`coordinatorRole${index}`} className="block text-sm font-medium text-gray-700">Role:</label>
+                                <input
+                                    type="text"
+                                    id={`coordinatorRole${index}`}
+                                    name="role"
+                                    value={coordinator.role}
+                                    onChange={(e) => handleCoordinatorChange(index, e)}
+                                    required
+                                    className="border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 p-2"
+                                />
+                            </div>
+                            <div className="mb-4">
+                                <label htmlFor={`cordinator_id${index}`} className="block text-sm font-medium text-gray-700">ID:</label>
+                                <input
+                                    type="text"
+                                    id={`cordinator_id${index}`}
+                                    name="cordinator_id"
+                                    value={coordinator.cordinator_id}
+                                    onChange={(e) => handleCoordinatorChange(index, e)}
+                                    required
+                                    className="border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 p-2"
+                                />
+                            </div>
+                            <div className="mb-4">
+                                <label htmlFor={`coordinatorEmail${index}`} className="block text-sm font-medium text-gray-700">Email:</label>
+                                <input
+                                    type="email"
+                                    id={`coordinatorEmail${index}`}
+                                    name="email"
+                                    value={coordinator.email}
+                                    onChange={(e) => handleCoordinatorChange(index, e)}
+                                    required
+                                    className="border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 p-2"
+                                />
+                            </div>
+                            <div className="mb-4">
+                                <label htmlFor={`coordinatorLink${index}`} className="block text-sm font-medium text-gray-700">Link:</label>
+                                <input
+                                    type="text"
+                                    id={`coordinatorLink${index}`}
+                                    name="link"
+                                    value={coordinator.link}
+                                    onChange={(e) => handleCoordinatorChange(index, e)}
+                                    className="border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 p-2"
+                                />
+                            </div>
+                            <div className="mb-4">
+                                <label htmlFor={`coordinatorProfileMode${index}`} className="block text-sm font-medium text-gray-700">Profile Mode:</label>
+                                <select
+                                    id={`coordinatorProfileMode${index}`}
+                                    name="profile_mode"
+                                    value={coordinator.profile_mode}
+                                    onChange={(e) => handleCoordinatorChange(index, e)}
+                                    className="border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 p-2"
+                                >
+                                    <option value="">Select profile mode</option>
+                                    <option value="whatsapp">WhatsApp</option>
+                                    <option value="instagram">Instagram</option>
+                                </select>
+                            </div>
+                            <div className="mb-4">
+                                <label htmlFor={`coordinatorImage${index}`} className="block text-sm font-medium text-gray-700">Coordinator Image:</label>
+                                <input
+                                    type="file"
+                                    id={`coordinatorImage${index}`}
+                                    name="image"
+                                    accept="image/*"
+                                    onChange={(e) => handleCoordinatorFileChange(index, e)}
+                                    className="mt-1 block w-full text-gray-500"
+                                />
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => removeCoordinator(index)}
+                                className="mt-4 inline-flex items-center px-4 py-2 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                            >
+                                Remove Coordinator
+                            </button>
                         </div>
-                        <div className="mb-4">
-                            <label htmlFor={`coordinatorRole${index}`} className="block text-sm font-medium text-gray-700">Role:</label>
-                            <input
-                                type="text"
-                                id={`coordinatorRole${index}`}
-                                name="role"
-                                value={coordinator.role}
-                                onChange={(e) => handleCoordinatorChange(index, e)}
-                                required
-                                className="border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 p-2"
-                            />
-                        </div>
-                        <div className="mb-4">
-                            <label htmlFor={`cordinator_id${index}`} className="block text-sm font-medium text-gray-700">id:</label>
-                            <input
-                                type="text"
-                                id={`cordinator_id${index}`}
-                                name="cordinator_id"
-                                value={coordinator.cordinator_id}
-                                onChange={(e) => handleCoordinatorChange(index, e)}
-                                required
-                                className="border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 p-2"
-                            />
-                        </div>
-                        <div className="mb-4">
-                            <label htmlFor={`coordinatorEmail${index}`} className="block text-sm font-medium text-gray-700">Email:</label>
-                            <input
-                                type="email"
-                                id={`coordinatorEmail${index}`}
-                                name="email"
-                                value={coordinator.email}
-                                onChange={(e) => handleCoordinatorChange(index, e)}
-                                required
-                                className="border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 p-2"
-                            />
-                        </div>
-                        <div className="mb-4">
-                            <label htmlFor={`coordinatorImage${index}`} className="block text-sm font-medium text-gray-700">Coordinator Image:</label>
-                            <input
-                                type="file"
-                                id={`coordinatorImage${index}`}
-                                name="image"
-                                accept="image/*"
-                                onChange={(e) => handleCoordinatorFileChange(index, e)}
-                                className="mt-1 block w-full text-gray-500"
-                            />
-                        </div>
-                        <button
-                            type="button"
-                            onClick={() => removeCoordinator(index)}
-                            className="mt-4 inline-flex items-center px-4 py-2 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
-                        >
-                            Remove Coordinator
-                        </button>
-                    </div>
-                ))}
-                <button
-                    type="button"
-                    onClick={addCoordinator}
-                    className="mt-4 inline-flex items-center px-4 py-2 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
-                >
-                    Add Coordinator
-                </button>
+                    ))}
+                    <button
+                        type="button"
+                        onClick={addCoordinator}
+                        className="mt-4 inline-flex items-center px-4 py-2 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+                    >
+                        Add Coordinator
+                    </button>
+                </div>
+                <div className="mb-6">
+                    <label className="text-lg font-medium text-gray-700 mb-2 block">Cancellation Fee Type</label>
+                    <select
+                        value={formData.cancellationType}
+                        onChange={handleCancellationTypeChange}
+                        className="border border-gray-300 rounded-md shadow-sm focus:ring-teal-500 focus:border-teal-500 p-3 w-full text-gray-800"
+                    >
+                        <option value="percentage">Percentage</option>
+                        <option value="amount">Amount</option>
+                    </select>
+                </div>
+
+                <div className="overflow-x-auto">
+                    <table className="min-w-full bg-white shadow-lg rounded-lg overflow-hidden">
+                        <thead>
+                            <tr className="bg-gray-100">
+                                <th className="py-4 px-6 text-left rounded-tl-lg bg-teal-400 text-gray-800 font-semibold">
+                                    Policy Start Day
+                                </th>
+                                <th className="py-4 px-6 text-left bg-teal-300 text-gray-800 font-semibold">
+                                    Policy End Day
+                                </th>
+                                <th className="py-4 px-6 text-left bg-teal-200 text-gray-800 font-semibold">
+                                    {formData.cancellationType === 'percentage' ? 'Cancellation Fee (%)' : 'Cancellation Fee (Amount)'}
+                                </th>
+                                <th className="py-4 px-6 text-center rounded-tr-lg bg-teal-500 text-white font-semibold">
+                                    Actions
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody className="text-gray-700 text-sm font-light">
+                            {formData.cancellationPolicies.map((policy, index) => (
+                                <tr key={index} className="border-b border-gray-200 hover:bg-gray-100 transition duration-150">
+                                    <td className="py-3 px-6">
+                                        <input
+                                            type="text"
+                                            value={policy.startDay}
+                                            onChange={(e) => handlePolicyChange(index, 'startDay', e.target.value)}
+                                            placeholder="Policy Start Day"
+                                            className="border border-gray-300 rounded-md p-2 w-full"
+                                        />
+                                    </td>
+                                    <td className="py-3 px-6">
+                                        <input
+                                            type="text"
+                                            value={policy.endDay}
+                                            onChange={(e) => handlePolicyChange(index, 'endDay', e.target.value)}
+                                            placeholder="Policy End Day"
+                                            className="border border-gray-300 rounded-md p-2 w-full"
+                                        />
+                                    </td>
+                                    <td className="py-3 px-6">
+                                        <input
+                                            type="text"
+                                            value={policy.fee}
+                                            onChange={(e) => handlePolicyChange(index, 'fee', e.target.value)}
+                                            placeholder={formData.cancellationType === 'percentage' ? "Cancellation Fee (%)" : "Cancellation Fee (Amount)"}
+                                            className="border border-gray-300 rounded-md p-2 w-full"
+                                        />
+                                    </td>
+                                    <td className="py-3 px-6 text-center">
+                                        <button
+                                            type="button"
+                                            onClick={() => handleRemovePolicy(index)}
+                                            className="bg-red-500 hover:bg-red-600 text-white py-2 px-4 rounded-full shadow-md transition duration-150"
+                                        >
+                                            Remove
+                                        </button>
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+
+                <div className="mt-4">
+                    <button
+                        type="button"
+                        onClick={handleAddPolicy}
+                        className="bg-orange-500 hover:bg-orange-600 text-white py-2 px-4 rounded-lg transition duration-150"
+                    >
+                        Add More Cancellation Policies
+                    </button>
+                </div>
+
 
 
                 <div>
@@ -692,6 +866,7 @@ function Addtripdetails() {
 
 
             </form>
+        </div>
         </div>
     );
 }
