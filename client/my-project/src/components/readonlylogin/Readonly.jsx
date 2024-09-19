@@ -28,7 +28,7 @@ function Readonly() {
   }, [view]);
 
   const handleEdit = (trip_id) => {
-    navigate(`/edittrips`, { state: { trip_id } });
+    navigate(`/${trip_id}`);
   };
 
   const handleViewToggle = () => {

@@ -46,7 +46,7 @@ function Supervisor() {
   };
 
   const handleEdit = (trip_id) => {
-    navigate(`/edittrips`, { state: { trip_id } });
+    navigate(`/${trip_id}`);
   };
 
   const handleLogout = () => {

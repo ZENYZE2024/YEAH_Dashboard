@@ -48,6 +48,10 @@ const Dashboard = () => {
     navigate('/addreview');
   };
 
+  const handleCancellationPolicyClick = () => {
+    navigate('/cancellationpolicy'); 
+  };
+
   const handleAddCommunityLinkClick = () => {
     setShowCommunityLinkInput(!showCommunityLinkInput);
   };
@@ -167,6 +171,16 @@ const Dashboard = () => {
               </div>
             )}
           </li>
+
+          <li>
+            <button
+              onClick={handleCancellationPolicyClick}
+              className="w-full text-left py-3 px-5 border-2 border-green-600 rounded-lg text-green-600 font-semibold shadow-md hover:shadow-lg hover:border-green-700 hover:text-green-700 transition-all duration-300"
+            >
+              Cancellation Policy
+            </button>
+          </li>
+
         </ul>
       </div>
 

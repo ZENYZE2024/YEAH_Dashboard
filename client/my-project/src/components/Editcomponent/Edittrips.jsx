@@ -697,12 +697,15 @@ function Edittrips() {
                         </a>
                       )}
                       <p className="text-center text-gray-600 mt-2">{coordinator.email}</p>
+
+                      {role !== 'Read-Only' && role !== 'User' && (
                       <button
                         onClick={() => handleEditcordinatorClick(index)}
                         className="block mx-auto mt-4 bg-blue-500 text-white px-4 py-2 rounded-md shadow-md hover:bg-blue-600"
                       >
                         Edit
                       </button>
+                      )}
                     </div>
                   )}
                 </div>
@@ -727,12 +730,14 @@ function Edittrips() {
                   <p><strong>End Day:</strong> {policy.policy_endDate}</p>
                   <p><strong>Fee:</strong> {policy.fee}%</p>
                   <p><strong>Type:</strong> {policy.cancellationType}</p>
+                  {role !== 'Read-Only' && role !== 'User' && (
                   <button
                     onClick={() => handleEditPolicyClick(index)}
                     className="block mx-auto mt-4 bg-blue-500 text-white px-4 py-2 rounded-md shadow-md hover:bg-blue-600"
                   >
                     Edit
                   </button>
+                  )}
                   {isEditingcancellationpolicy === index ? (
                     <div>
                       <input

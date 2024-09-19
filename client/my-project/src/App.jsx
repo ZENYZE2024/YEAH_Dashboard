@@ -13,6 +13,7 @@ import UserDashboard from "./components/Usercomponent/User";
 import Userslist from "./components/Userslist/Userslist";
 import AddCarousals from "./components/Addcorousals/Addcorousals";
 import Addreview from "./components/revies/Review";
+import Cancellationpolicy from "./components/Cancellationpolicy/Cancellationpolicy";
 function App(){
        return(
         <>
@@ -30,6 +31,7 @@ function App(){
                             <Route path="/usersmanagement" exact element={<Userslist/>}/> 
                             <Route path="/addcarousals" exact element={<AddCarousals/>} />
                             <Route path="/addreview" exact element={<Addreview/>}/>
+                            <Route path="/cancellationpolicy" exact element={<Cancellationpolicy/>}/>
                      </Routes>
               </div>
         </Router>

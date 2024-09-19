@@ -18,7 +18,7 @@ app.use(bodyParser.json({ limit: '50mb' }));
 app.use(bodyParser.urlencoded({ limit: '50mb', extended: true }));
 
 
-const uploadDir = 'uploads\\';
+const uploadDir = path.join(__dirname, 'uploads');
 if (!fs.existsSync(uploadDir)) {
     fs.mkdirSync(uploadDir);
 }
@@ -477,6 +477,7 @@ app.post('/addtrips', upload.any(), async (req, res) => {
             itinerary, trip_description, googlemap, whatsapplink, userId, coordinators,
             cancellationPolicies, cancellationType
         } = req.body;
+
         const trip_start_date = trip_start_date_formatted;
         const end_date = end_date_formatted;
         const totalseats = seats;
@@ -570,14 +571,12 @@ app.post('/addtrips', upload.any(), async (req, res) => {
 
             const createdAt = new Date();
 
-            const insertTripSQL = `
-                INSERT INTO tripdata (
-                    trip_name, trip_code, slug, cost, seats, totalseats, trip_start_date, end_date,
-                    trip_start_point, trip_end_point, destination, trip_duration,
-                    traveller_type, inclusion, exclusion, points_to_note, trip_type, trip_description, googlemap, whatsapplink,
-                    created_by, created_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            `;
+            const insertTripSQL = `INSERT INTO tripdata (
+                trip_name, trip_code, slug, cost, seats, totalseats, trip_start_date, end_date,
+                trip_start_point, trip_end_point, destination, trip_duration,
+                traveller_type, inclusion, exclusion, points_to_note, trip_type, trip_description, googlemap, whatsapplink,
+                created_by, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
             const tripValues = [
                 trip_name, trip_code, slug, cost, seats, totalseats, trip_start_date, end_date,
                 trip_start_point, trip_end_point, destination, trip_duration,
@@ -592,19 +591,13 @@ app.post('/addtrips', upload.any(), async (req, res) => {
 
             // Insert trip image into `images` table
             if (tripImagePath) {
-                const insertImageSQL = `
-                    INSERT INTO images (trip_id, file_path)
-                    VALUES (?, ?)
-                `;
+                const insertImageSQL = `INSERT INTO images (trip_id, file_path) VALUES (?, ?)`;
                 await connection.query(insertImageSQL, [trip_id, tripImagePath]);
                 console.log(`Inserted trip image with path: ${tripImagePath}`);
             }
 
             // Insert additional images into `additionalimages` table
-            const insertAdditionalImagesSQL = `
-                INSERT INTO additionalimages (trip_id, additional_images)
-                VALUES (?, ?)
-            `;
+            const insertAdditionalImagesSQL = `INSERT INTO additionalimages (trip_id, additional_images) VALUES (?, ?)`;
             for (const [key, imagePath] of Object.entries(additionalImages)) {
                 await connection.query(insertAdditionalImagesSQL, [trip_id, imagePath]);
                 console.log(`Inserted additional image with path: ${imagePath}`);
@@ -613,11 +606,9 @@ app.post('/addtrips', upload.any(), async (req, res) => {
             // Insert itinerary data into `tripitenary` table
             const itineraryData = Array.isArray(itinerary) ? itinerary : JSON.parse(itinerary);
 
-            const insertItinerarySQL = `
-                INSERT INTO tripitenary (
-                    TRIP_NAME, TRIP_CODE, TRIP_ID, DAY, DATE, DAY_TITLE, DAY_DESCRIPTION, DAY_IMG
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-            `;
+            const insertItinerarySQL = `INSERT INTO tripitenary (
+                TRIP_NAME, TRIP_CODE, TRIP_ID, DAY, DATE, DAY_TITLE, DAY_DESCRIPTION, DAY_IMG
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`;
             for (const day of itineraryData) {
                 const dayIndex = parseInt(day.DAY.replace('Day ', ''), 10) - 1;
                 const itineraryValues = [
@@ -627,68 +618,90 @@ app.post('/addtrips', upload.any(), async (req, res) => {
                 await connection.query(insertItinerarySQL, itineraryValues);
             }
 
-            // Insert coordinator data into `tripcoordinators` table
-            const insertCoordinatorSQL = `
-                INSERT INTO tripcoordinators (trip_id, cordinator_id, image, name, role, email,link,profile_mode)
-                VALUES (?, ?, ?, ?, ?, ?,?,?)
-            `;
+            // Fetch additional coordinator details and insert them into `tripcoordinators` table
+            const fetchCoordinatorDetailsSQL = `SELECT id, link, profile_image, profile_mode FROM tripusers WHERE email = ?`;
+            const insertCoordinatorSQL = `INSERT INTO tripcoordinators (
+                trip_id, cordinator_id, image, name, role, email, link, profile_mode
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`;
+
             for (const coordinator of coordinators) {
+                const [coordinatorDetails] = await connection.query(fetchCoordinatorDetailsSQL, [coordinator.email]);
+                const coordinatorData = coordinatorDetails[0] || {};
+
                 const coordinatorValues = [
-                    trip_id, coordinator.cordinator_id || null, coordinatorImages[coordinator.cordinator_id]?.image || null,
-                    coordinator.name || null, coordinator.role || null, coordinator.email || null, coordinator.link || null, coordinator.profile_mode || null
+                    trip_id, coordinatorData.id || null, // Use the id fetched from tripusers
+                    coordinatorData.profile_image || null,
+                    coordinator.name || null, coordinator.role || null, coordinator.email || null,
+                    coordinatorData.link || null, coordinatorData.profile_mode || null
                 ];
                 await connection.query(insertCoordinatorSQL, coordinatorValues);
             }
 
+            // Process and insert cancellation policies
+            // Process and insert cancellation policies
             let processedPolicies = [];
             cancellationPolicies.forEach(policy => {
-                if (typeof policy === 'string') {
-                    if (policy.startsWith('[object Object]')) {
-                        console.warn('Ignoring invalid cancellation policy:', policy);
-                    } else {
-                        try {
-                            const parsedPolicies = JSON.parse(policy);
-                            if (Array.isArray(parsedPolicies)) {
-                                processedPolicies = processedPolicies.concat(parsedPolicies);
-                            }
-                        } catch (err) {
-                            console.error('Error parsing JSON string:', policy);
+                if (typeof policy === 'string' && policy.trim() !== 'undefined') {
+                    try {
+                        const parsedPolicies = JSON.parse(policy);
+                        if (Array.isArray(parsedPolicies)) {
+                            processedPolicies = processedPolicies.concat(parsedPolicies);
                         }
+                    } catch (err) {
+                        console.error('Error parsing cancellation policy:', policy, err);
                     }
                 }
             });
 
-            console.log('Processed Cancellation Policies:', processedPolicies);
+            console.log('Processed Cancellation Policies:', JSON.stringify(processedPolicies, null, 2));
 
-            const insertCancellationPolicySQL = `
-            INSERT INTO cancellationpolicies (policy_startdate, policy_endDate, fee, trip_id, cancellationType)
-            VALUES (?, ?, ?, ?, ?)
-        `;
-
+            const insertCancellationPolicySQL = `INSERT INTO cancellationpolicies (
+    policy_startdate, policy_endDate, fee, trip_id, cancellationType
+) VALUES (?, ?, ?, ?, ?)`;
 
             for (const policy of processedPolicies) {
-                const cancellationPolicyValues = [
-                    policy.startDay, policy.endDay, policy.fee, trip_id, cancellationType
-                ];
-                await connection.query(insertCancellationPolicySQL, cancellationPolicyValues);
+                for (const dateRange of policy.dateRanges) {
+                    const startDate = dateRange.startDate || null;
+                    const endDate = (dateRange.endDate !== undefined && dateRange.endDate !== null) ? dateRange.endDate : null;
+                    const fee = dateRange.fee || null;
+
+                    // Only insert if startDate and fee are valid
+                    if (startDate !== null && fee !== null) {
+                        const cancellationPolicyValues = [
+                            startDate,
+                            endDate,
+                            fee,
+                            trip_id,
+                            policy.feeType || null
+                        ];
+                        await connection.query(insertCancellationPolicySQL, cancellationPolicyValues);
+                    }
+                }
             }
 
             console.log('Inserted cancellation policies');
 
             await connection.commit();
-            res.json({ message: 'Trip, images, itinerary data, and cancellation policies inserted successfully!' });
+            res.json({ message: 'Trip, images, itinerary data, and policies inserted successfully!' });
         } catch (error) {
-            if (connection) await connection.rollback();
-            console.error('Transaction error:', error);
-            res.status(500).json({ error: 'Failed to process request' });
+            console.error('Error inserting trip data:', error);
+            if (connection) {
+                await connection.rollback();
+            }
+            res.status(500).json({ message: 'Error inserting trip data', error });
         } finally {
-            if (connection) connection.release();
+            if (connection) {
+                connection.release();
+            }
         }
-    } catch (err) {
-        console.error('Error in /addtrips route:', err);
-        res.status(500).json({ error: 'Internal server error' });
+    } catch (error) {
+        console.error('Unexpected error:', error);
+        res.status(500).json({ message: 'Unexpected error occurred', error });
     }
 });
+
+
+
 
 
 
@@ -1261,7 +1274,133 @@ app.get('/getthecoordinators', async (req, res) => {
     }
 });
 
+app.post('/entercancellationpolicy', async (req, res) => {
+    const { policies } = req.body;
 
+    // Log the received data
+    console.log('Received data:', req.body);
+
+    if (!Array.isArray(policies)) {
+        return res.status(400).json({ error: 'Invalid input' });
+    }
+
+    let connection;
+    try {
+        connection = await pool.getConnection();
+
+        for (const policy of policies) {
+            const { feeType, dateRanges } = policy;
+
+            // Log the policy data
+            console.log('Processing policy:', feeType, dateRanges);
+
+            if (!feeType || !Array.isArray(dateRanges)) {
+                return res.status(400).json({ error: 'Invalid policy data' });
+            }
+
+            // Insert policy
+            const [policyResult] = await connection.query(
+                'INSERT INTO cancellationpolicy (fee_type) VALUES (?)',
+                [feeType]
+            );
+
+            const policyId = policyResult.insertId;
+
+            // Insert date ranges
+            const dateRangeValues = dateRanges.map(range => [policyId, range.startDate, range.endDate, range.fee]);
+
+            await connection.query(
+                'INSERT INTO policy_date_ranges (policy_id, start_date, end_date, fee) VALUES ?',
+                [dateRangeValues]
+            );
+        }
+
+        res.status(201).json({ message: 'Cancellation policies created successfully' });
+    } catch (error) {
+        console.error('Error creating cancellation policies:', error);
+        res.status(500).json({ error: error.message });
+    } finally {
+        if (connection) connection.release();
+    }
+});
+app.get('/getCancellationPolicies', async (req, res) => {
+    let connection;
+
+    try {
+        // Get a connection from the pool
+        connection = await pool.getConnection();
+
+        const [rows] = await connection.query(`
+            SELECT cp.policy_id, cp.fee_type, dr.start_date, dr.end_date, dr.fee
+            FROM cancellationpolicy AS cp
+            LEFT JOIN policy_date_ranges AS dr ON cp.policy_id = dr.policy_id
+        `);
+
+        // Grouping by policy_id to handle multiple date ranges for a single policy
+        const policies = {};
+        rows.forEach(row => {
+            if (!policies[row.policy_id]) {
+                policies[row.policy_id] = {
+                    id: row.policy_id,
+                    feeType: row.fee_type,
+                    dateRanges: [],
+                };
+            }
+            if (row.start_date !== null && row.end_date !== null) {
+                policies[row.policy_id].dateRanges.push({
+                    startDate: row.start_date,
+                    endDate: row.end_date,
+                    fee: row.fee,
+                });
+            }
+        });
+
+        // Convert policies object to an array
+        const result = Object.values(policies);
+
+        res.json(result);
+    } catch (error) {
+        console.error('Error fetching cancellation policies:', error);
+        res.status(500).json({ error: 'Internal Server Error' });
+    } finally {
+        // Release the connection back to the pool
+        if (connection) connection.release();
+    }
+});
+
+app.delete('/deletecancellationpolicy/:id', async (req, res) => {
+    const policyId = req.params.id;
+  
+    try {
+      const connection = await pool.getConnection();
+  
+      try {
+        await connection.beginTransaction();
+  
+        const deleteDateRangesQuery = 'DELETE FROM policy_date_ranges WHERE policy_id = ?';
+        await connection.query(deleteDateRangesQuery, [policyId]);
+  
+        const deletePolicyQuery = 'DELETE FROM cancellationpolicy WHERE policy_id = ?';
+        await connection.query(deletePolicyQuery, [policyId]);
+  
+        await connection.commit();
+  
+        res.status(200).json({ message: 'Policy and related date ranges deleted successfully' });
+  
+      } catch (error) {
+        await connection.rollback();
+        console.error('Error during transaction:', error);
+        res.status(500).json({ message: 'Failed to delete policy' });
+  
+      } finally {
+        connection.release();
+      }
+  
+    } catch (error) {
+      console.error('Error connecting to the database:', error);
+      res.status(500).json({ message: 'Failed to connect to the database' });
+    }
+  });
 
 app.use(express.static(path.join(__dirname, 'public')));
 

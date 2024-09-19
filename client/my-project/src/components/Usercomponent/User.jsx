@@ -5,6 +5,8 @@ import { useNavigate } from 'react-router-dom';
 function UserDashboard() {
   const [trips, setTrips] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [searchTermFuture, setSearchTermFuture] = useState('');
+  const [searchTermPast, setSearchTermPast] = useState('');
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -19,10 +21,11 @@ function UserDashboard() {
         const response = await axios.get('https://admin.yeahtrips.in/userdashboard', {
           params: { user_id: userId }
         });
+
+        console.log(response.data);
         setTrips(response.data);
       } catch (error) {
         console.error('Error fetching trips:', error);
-        // Optionally handle the error here
       } finally {
         setLoading(false);
       }
@@ -37,7 +40,7 @@ function UserDashboard() {
 
     try {
       const payload = JSON.parse(atob(token.split('.')[1]));
-      return payload.userId; // Adjust if your token uses a different key
+      return payload.userId;
     } catch (e) {
       console.error('Error decoding token:', e);
       return null;
@@ -45,14 +48,35 @@ function UserDashboard() {
   };
 
   const handleEdit = (trip_id) => {
-    navigate(`/edittrips`, { state: { trip_id } });
+    navigate(`/${trip_id}`);
   };
 
   const handleLogout = () => {
     localStorage.removeItem('accessToken');
-    localStorage.removeItem('role'); // Remove role from localStorage
-    navigate('/', { replace: true }); // Replace history entry to prevent back navigation
+    localStorage.removeItem('role');
+    navigate('/', { replace: true });
   };
+
+  const formatDate = (dateStr) => {
+    // Convert "19th September 2024" to "2024-09-19" for comparison
+    const dateParts = dateStr.split(' ');
+    const day = dateParts[0].replace(/[^0-9]/g, ''); // Extract numeric day
+    const month = new Date(Date.parse(dateParts[1] + " 1, 2021")).getMonth() + 1; // Get month number
+    const year = dateParts[2];
+    return `${year}-${month < 10 ? '0' + month : month}-${day < 10 ? '0' + day : day}`; // Return formatted date
+  };
+
+  const currentDate = new Date();
+  const pastTrips = trips.filter(trip => new Date(formatDate(trip.trip_start_date)) < currentDate);
+  const futureTrips = trips.filter(trip => new Date(formatDate(trip.trip_start_date)) >= currentDate);
+
+  const filteredFutureTrips = futureTrips.filter(trip =>
+    trip.trip_name.toLowerCase().includes(searchTermFuture.toLowerCase())
+  );
+
+  const filteredPastTrips = pastTrips.filter(trip =>
+    trip.trip_name.toLowerCase().includes(searchTermPast.toLowerCase())
+  );
 
   if (loading) return <p className="text-center text-lg text-gray-600">Loading...</p>;
 
@@ -67,12 +91,20 @@ function UserDashboard() {
           Logout
         </button>
       </div>
-      <div className="bg-white w-full max-w-screen-xl p-6 rounded-lg shadow-lg">
-        {trips.length === 0 ? (
-          <p className="text-center text-lg text-gray-600">No trips assigned</p>
-        ) : (
+
+      {/* Future Trips */}
+      {filteredFutureTrips.length > 0 && (
+        <div className="bg-white w-full max-w-screen-xl p-6 rounded-lg shadow-lg mb-6">
+          <h2 className="text-xl font-semibold mb-4">Upcoming Trips</h2>
+          <input
+            type="text"
+            placeholder="Search Upcoming Trips"
+            value={searchTermFuture}
+            onChange={(e) => setSearchTermFuture(e.target.value)}
+            className="mb-4 p-2 border border-gray-300 rounded-lg"
+          />
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-            {trips.map((trip) => (
+            {filteredFutureTrips.map((trip) => (
               <div
                 key={trip.trip_id}
                 className="relative bg-white rounded-lg overflow-hidden shadow-lg transition-transform transform hover:scale-105 hover:shadow-2xl"
@@ -108,8 +140,42 @@ function UserDashboard() {
               </div>
             ))}
           </div>
-        )}
-      </div>
+        </div>
+      )}
+
+      {/* Past Trips */}
+      {filteredPastTrips.length > 0 && (
+        <div className="bg-white w-full max-w-screen-xl p-6 rounded-lg shadow-lg mb-6">
+          <h2 className="text-xl font-semibold mb-4">Past Trips</h2>
+          <input
+            type="text"
+            placeholder="Search Past Trips"
+            value={searchTermPast}
+            onChange={(e) => setSearchTermPast(e.target.value)}
+            className="mb-4 p-2 border border-gray-300 rounded-lg"
+          />
+          <table className="min-w-full bg-white">
+            <thead>
+              <tr>
+                <th className="py-2 px-4 border-b text-left">Trip Name</th>
+                <th className="py-2 px-4 border-b text-left">Start Date</th>
+                <th className="py-2 px-4 border-b text-left">End Date</th>
+                <th className="py-2 px-4 border-b text-left">Start Point</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredPastTrips.map((trip) => (
+                <tr key={trip.trip_id} className="hover:bg-gray-100">
+                  <td className="py-2 px-4 border-b">{trip.trip_name}</td>
+                  <td className="py-2 px-4 border-b">{trip.trip_start_date}</td>
+                  <td className="py-2 px-4 border-b">{trip.end_date}</td>
+                  <td className="py-2 px-4 border-b">{trip.trip_start_point}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }
