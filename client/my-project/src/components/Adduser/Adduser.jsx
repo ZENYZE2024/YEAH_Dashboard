@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import axios from 'axios';
-import Navbar from '../navbar/navbar';
+import AdminNavbar from '../Dashboardnavbar/Dashboardnavbar';
 function Adduser() {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
@@ -50,11 +50,11 @@ function Adduser() {
 
         <div>
             <div>
-                 <Navbar/>
+                 <AdminNavbar/>
             </div>
             <div className="flex items-center justify-center min-h-screen bg-gray-100">
                 <div className="w-full max-w-md p-8 bg-white shadow-lg rounded-lg">
-                    <h2 className="text-2xl font-semibold text-gray-800 mb-6">Register</h2>
+                    <h2 className="text-2xl font-semibold text-gray-800 mb-6">Add Team Member</h2>
                     <form onSubmit={handleSubmit} className="space-y-4" encType="multipart/form-data">
                         <div className="form-group">
                             <label htmlFor="name" className="block text-sm font-medium text-gray-700">Name:</label>
@@ -139,7 +139,7 @@ function Adduser() {
                             type="submit"
                             className="w-full px-4 py-2 bg-blue-500 text-white font-semibold rounded-md shadow-sm hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
                         >
-                            Register
+                            Submit
                         </button>
                     </form>
                     {message && <p className="mt-4 text-center text-sm text-red-500">{message}</p>}

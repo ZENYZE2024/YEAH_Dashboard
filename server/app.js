@@ -640,46 +640,46 @@ app.post('/addtrips', upload.any(), async (req, res) => {
             // Process and insert cancellation policies
             // Process and insert cancellation policies
             let processedPolicies = [];
-            cancellationPolicies.forEach(policy => {
-                if (typeof policy === 'string' && policy.trim() !== 'undefined') {
-                    try {
-                        const parsedPolicies = JSON.parse(policy);
-                        if (Array.isArray(parsedPolicies)) {
-                            processedPolicies = processedPolicies.concat(parsedPolicies);
-                        }
-                    } catch (err) {
-                        console.error('Error parsing cancellation policy:', policy, err);
-                    }
-                }
-            });
+cancellationPolicies.forEach(policy => {
+    if (typeof policy === 'string' && policy.trim() !== 'undefined') {
+        try {
+            const parsedPolicies = JSON.parse(policy);
+            if (Array.isArray(parsedPolicies)) {
+                processedPolicies = processedPolicies.concat(parsedPolicies);
+            }
+        } catch (err) {
+            console.error('Error parsing cancellation policy:', policy, err);
+        }
+    }
+});
 
-            console.log('Processed Cancellation Policies:', JSON.stringify(processedPolicies, null, 2));
+console.log('Processed Cancellation Policies:', JSON.stringify(processedPolicies, null, 2));
 
-            const insertCancellationPolicySQL = `INSERT INTO cancellationpolicies (
+const insertCancellationPolicySQL = `INSERT INTO cancellationpolicies (
     policy_startdate, policy_endDate, fee, trip_id, cancellationType
 ) VALUES (?, ?, ?, ?, ?)`;
 
-            for (const policy of processedPolicies) {
-                for (const dateRange of policy.dateRanges) {
-                    const startDate = dateRange.startDate || null;
-                    const endDate = (dateRange.endDate !== undefined && dateRange.endDate !== null) ? dateRange.endDate : null;
-                    const fee = dateRange.fee || null;
+for (const policy of processedPolicies) {
+    for (const dateRange of policy.dateRanges) {
+        const startDate = dateRange.startDate || null; // Keep null if it's empty
+        const endDate = (dateRange.endDate !== undefined && dateRange.endDate !== null) ? dateRange.endDate : null;
+        const fee = dateRange.fee || null;
 
-                    // Only insert if startDate and fee are valid
-                    if (startDate !== null && fee !== null) {
-                        const cancellationPolicyValues = [
-                            startDate,
-                            endDate,
-                            fee,
-                            trip_id,
-                            policy.feeType || null
-                        ];
-                        await connection.query(insertCancellationPolicySQL, cancellationPolicyValues);
-                    }
-                }
-            }
+        // Proceed with inserting even if startDate is null
+        const cancellationPolicyValues = [
+            startDate,       // Null or valid date
+            endDate,         // Null or valid date
+            fee,             // Null or valid fee
+            trip_id,         // Assuming trip_id is defined elsewhere
+            policy.feeType || null // Null or feeType value
+        ];
 
-            console.log('Inserted cancellation policies');
+        // Insert the record into the database
+        await connection.query(insertCancellationPolicySQL, cancellationPolicyValues);
+    }
+}
+
+console.log('Inserted cancellation policies');
 
             await connection.commit();
             res.json({ message: 'Trip, images, itinerary data, and policies inserted successfully!' });
@@ -1306,8 +1306,20 @@ app.post('/entercancellationpolicy', async (req, res) => {
 
             const policyId = policyResult.insertId;
 
-            // Insert date ranges
-            const dateRangeValues = dateRanges.map(range => [policyId, range.startDate, range.endDate, range.fee]);
+            // Insert date ranges, convert empty startDate to NULL, enforce non-NULL endDate
+            const dateRangeValues = dateRanges.map(range => {
+                // Ensure endDate is not empty or undefined
+                if (!range.endDate || range.endDate === '') {
+                    throw new Error('endDate cannot be empty');
+                }
+
+                return [
+                    policyId,
+                    range.startDate === '' ? null : range.startDate, // Convert empty startDate to NULL
+                    range.endDate,  // endDate cannot be NULL or empty
+                    range.fee
+                ];
+            });
 
             await connection.query(
                 'INSERT INTO policy_date_ranges (policy_id, start_date, end_date, fee) VALUES ?',
@@ -1318,11 +1330,18 @@ app.post('/entercancellationpolicy', async (req, res) => {
         res.status(201).json({ message: 'Cancellation policies created successfully' });
     } catch (error) {
         console.error('Error creating cancellation policies:', error);
+
+        // Handle custom error for empty endDate
+        if (error.message === 'endDate cannot be empty') {
+            return res.status(400).json({ error: 'endDate is required and cannot be empty.' });
+        }
+
         res.status(500).json({ error: error.message });
     } finally {
         if (connection) connection.release();
     }
 });
+
 app.get('/getCancellationPolicies', async (req, res) => {
     let connection;
 
@@ -1346,13 +1365,13 @@ app.get('/getCancellationPolicies', async (req, res) => {
                     dateRanges: [],
                 };
             }
-            if (row.start_date !== null && row.end_date !== null) {
-                policies[row.policy_id].dateRanges.push({
-                    startDate: row.start_date,
-                    endDate: row.end_date,
-                    fee: row.fee,
-                });
-            }
+
+            // Always include the start_date and end_date even if they are null
+            policies[row.policy_id].dateRanges.push({
+                startDate: row.start_date, // This will include NULL values
+                endDate: row.end_date,     // This will include NULL values
+                fee: row.fee,
+            });
         });
 
         // Convert policies object to an array
@@ -1368,39 +1387,40 @@ app.get('/getCancellationPolicies', async (req, res) => {
     }
 });
 
+
 app.delete('/deletecancellationpolicy/:id', async (req, res) => {
     const policyId = req.params.id;
-  
+
     try {
-      const connection = await pool.getConnection();
-  
-      try {
-        await connection.beginTransaction();
-  
-        const deleteDateRangesQuery = 'DELETE FROM policy_date_ranges WHERE policy_id = ?';
-        await connection.query(deleteDateRangesQuery, [policyId]);
-  
-        const deletePolicyQuery = 'DELETE FROM cancellationpolicy WHERE policy_id = ?';
-        await connection.query(deletePolicyQuery, [policyId]);
-  
-        await connection.commit();
-  
-        res.status(200).json({ message: 'Policy and related date ranges deleted successfully' });
-  
-      } catch (error) {
-        await connection.rollback();
-        console.error('Error during transaction:', error);
-        res.status(500).json({ message: 'Failed to delete policy' });
-  
-      } finally {
-        connection.release();
-      }
-  
+        const connection = await pool.getConnection();
+
+        try {
+            await connection.beginTransaction();
+
+            const deleteDateRangesQuery = 'DELETE FROM policy_date_ranges WHERE policy_id = ?';
+            await connection.query(deleteDateRangesQuery, [policyId]);
+
+            const deletePolicyQuery = 'DELETE FROM cancellationpolicy WHERE policy_id = ?';
+            await connection.query(deletePolicyQuery, [policyId]);
+
+            await connection.commit();
+
+            res.status(200).json({ message: 'Policy and related date ranges deleted successfully' });
+
+        } catch (error) {
+            await connection.rollback();
+            console.error('Error during transaction:', error);
+            res.status(500).json({ message: 'Failed to delete policy' });
+
+        } finally {
+            connection.release();
+        }
+
     } catch (error) {
-      console.error('Error connecting to the database:', error);
-      res.status(500).json({ message: 'Failed to connect to the database' });
+        console.error('Error connecting to the database:', error);
+        res.status(500).json({ message: 'Failed to connect to the database' });
     }
-  });
+});
 
 app.use(express.static(path.join(__dirname, 'public')));
 

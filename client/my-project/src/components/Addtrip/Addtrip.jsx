@@ -5,7 +5,9 @@ import 'react-datepicker/dist/react-datepicker.css';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 import { format, differenceInDays, addDays } from 'date-fns';
-import Navbar from '../navbar/navbar';
+import AdminNavbar from '../Dashboardnavbar/Dashboardnavbar';
+
+
 
 function Addtripdetails() {
     const [formData, setFormData] = useState({
@@ -386,13 +388,15 @@ function Addtripdetails() {
     }, []);
 
 
-
     return (
         <div>
             <div>
-                <Navbar />
+                <AdminNavbar />
             </div>
+
+           
             <div className="p-6 max-w-3xl mx-auto bg-white rounded-lg shadow-md">
+
                 <h1 className="text-2xl font-semibold mb-6 text-gray-800">Add Trip Details</h1>
                 <form onSubmit={handleSubmit} encType="multipart/form-data" className="space-y-6">
                     <div className="flex flex-col">

@@ -4,8 +4,7 @@ import Rating from 'react-stars';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faStar as fasStar } from '@fortawesome/free-solid-svg-icons';
 import { faStar as farStar } from '@fortawesome/free-regular-svg-icons';
-import Navbar from "../navbar/navbar";
-
+import AdminNavbar from "../Dashboardnavbar/Dashboardnavbar";
 
 const Addreview = () => {
     const [carousals, setCarousals] = useState([]);
@@ -89,7 +88,7 @@ const Addreview = () => {
     return (
         <div>
             <div>
-                <Navbar />
+                <AdminNavbar />
             </div>
             <div className="p-8 bg-white shadow-lg rounded-lg max-w-3xl mx-auto">
                 <h2 className="text-3xl font-semibold mb-6 text-center text-gray-800">Add Carousals</h2>

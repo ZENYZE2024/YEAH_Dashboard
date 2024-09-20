@@ -3,7 +3,7 @@ import axios from "axios";
 import { useLocation, useParams, useNavigate } from "react-router-dom";
 import { saveAs } from "file-saver";
 import * as XLSX from "xlsx";
-import Navbar from "../navbar/navbar";
+import AdminNavbar from "../Dashboardnavbar/Dashboardnavbar";
 function Edittrips() {
   const { trip_id } = useParams();
   const [tripDetails, setTripDetails] = useState(null);
@@ -410,7 +410,7 @@ function Edittrips() {
   return (
     <div>
       <div>
-        <Navbar />
+        <AdminNavbar />
       </div>
       <div className="bg-white p-6 rounded-lg shadow-lg max-w-4xl mx-auto mt-8">
         {tripDetails && (
@@ -604,7 +604,7 @@ function Edittrips() {
 
       </div>
       <div>
-        <h1 className="text-center font-extrabold max-w-4xl mx-auto mt-8 text-2xl">Coordinators</h1>
+        <h1 className="text-center font-extrabold max-w-4xl mx-auto mt-8 text-2xl">TEAM</h1>
         <div className="p-6">
           {coordinators.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

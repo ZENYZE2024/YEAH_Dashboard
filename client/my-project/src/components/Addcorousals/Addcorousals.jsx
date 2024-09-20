@@ -1,6 +1,6 @@
 import axios from "axios";
 import React, { useState, useEffect } from "react";
-import Navbar from "../navbar/navbar";
+import AdminNavbar from "../Dashboardnavbar/Dashboardnavbar";
 const AddCarousals = () => {
   const [carousals, setCarousals] = useState([]);
   const [title, setTitle] = useState("");
@@ -73,7 +73,7 @@ const AddCarousals = () => {
   return (
     <div>
       <div>
-        <Navbar />
+        <AdminNavbar />
       </div>
       <div className="p-8 bg-white shadow-lg rounded-lg max-w-md mx-auto mt-6">
         <h2 className="text-3xl font-extrabold mb-6 text-gray-800">Add Carousals</h2>

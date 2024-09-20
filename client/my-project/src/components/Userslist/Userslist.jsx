@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
-import Navbar from '../navbar/navbar';
+import AdminNavbar from '../Dashboardnavbar/Dashboardnavbar';
 
 
 function Userslist() {
@@ -42,16 +42,16 @@ function Userslist() {
     return (
         <div>
             <div>
-                <Navbar />
+                <AdminNavbar />
             </div>
             <div className="p-6 bg-gray-100 min-h-screen">
                 <div className="flex justify-between items-center mb-6">
-                    <h1 className="text-3xl font-bold text-gray-800">User Details</h1>
+                    <h1 className="text-3xl font-bold text-gray-800">TEAM</h1>
                     <button
                         className="bg-gradient-to-r from-indigo-500 to-indigo-700 text-white py-2 px-4 rounded-lg shadow-lg hover:from-indigo-600 hover:to-indigo-800 focus:outline-none focus:ring-2 focus:ring-indigo-300 transition duration-300"
                         onClick={handleAddUserClick}
                     >
-                        Add User
+                        Add Member
                     </button>
                 </div>
                 {loading ? (

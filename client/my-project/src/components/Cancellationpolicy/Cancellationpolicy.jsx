@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import AdminNavbar from '../Dashboardnavbar/Dashboardnavbar';
 
 const Cancellationpolicy = () => {
     const [policies, setPolicies] = useState([
@@ -16,7 +17,8 @@ const Cancellationpolicy = () => {
         const fetchPolicies = async () => {
             try {
                 const response = await axios.get('https://admin.yeahtrips.in/getcancellationpolicies');
-                setExistingPolicies(response.data); // Assuming response data is an array of policies
+                setExistingPolicies(response.data);
+                console.log(response.data);
             } catch (error) {
                 console.error('Error fetching policies:', error);
             }
@@ -25,28 +27,30 @@ const Cancellationpolicy = () => {
         fetchPolicies();
     }, []);
 
-    // Handle change in policy fields
+    // Handle changes for fee type, startDate, endDate, and fee
     const handlePolicyChange = (index, field, value) => {
         const updatedPolicies = [...policies];
         updatedPolicies[index][field] = value;
         setPolicies(updatedPolicies);
     };
 
-    // Handle change in date range fields
+    // Handle changes for date ranges within a policy
     const handleDateRangeChange = (policyIndex, rangeIndex, field, value) => {
         const updatedPolicies = [...policies];
         updatedPolicies[policyIndex].dateRanges[rangeIndex][field] = value;
         setPolicies(updatedPolicies);
     };
 
-    // Add a new date range to a policy
+    // Add a new date range to a specific policy
     const handleAddDateRange = (policyIndex) => {
         const updatedPolicies = [...policies];
-        updatedPolicies[policyIndex].dateRanges.push({ startDate: '', endDate: '', fee: '' });
+        const lastRange = updatedPolicies[policyIndex].dateRanges[updatedPolicies[policyIndex].dateRanges.length - 1];
+        const newStartDate = lastRange.endDate ? parseInt(lastRange.endDate) - 1 : '';
+        updatedPolicies[policyIndex].dateRanges.push({ startDate: newStartDate, endDate: '', fee: '' });
         setPolicies(updatedPolicies);
     };
 
-    // Remove a date range from a policy
+    // Remove a date range from a specific policy
     const handleRemoveDateRange = (policyIndex, rangeIndex) => {
         const updatedPolicies = [...policies];
         updatedPolicies[policyIndex].dateRanges = updatedPolicies[policyIndex].dateRanges.filter((_, i) => i !== rangeIndex);
@@ -63,16 +67,23 @@ const Cancellationpolicy = () => {
         setPolicies(policies.filter((_, i) => i !== index));
     };
 
-    // Handle form submission
+    // Submit the policies and ensure validation
     const handleSubmit = async (e) => {
         e.preventDefault();
 
-        // Validate input data
-        if (policies.some(policy => policy.dateRanges.some(range => !range.startDate || !range.endDate || !range.fee))) {
-            alert('Please fill in all fields for each policy');
+        // Validate that all fields except the first startDate are filled
+        const isValid = policies.every((policy, policyIndex) =>
+            policy.dateRanges.every((range, rangeIndex) =>
+                (policyIndex === 0 && rangeIndex === 0 ? true : range.startDate && range.endDate && range.fee)
+            )
+        );
+
+        if (!isValid) {
+            alert('Please fill in all fields for each policy except for the start date of the first range.');
             return;
         }
 
+        // Submit policies
         try {
             const response = await axios.post('https://admin.yeahtrips.in/entercancellationpolicy', { policies });
             console.log(response.data);
@@ -83,7 +94,7 @@ const Cancellationpolicy = () => {
         }
     };
 
-    // Handle deleting an existing policy
+    // Delete an existing policy
     const handleDeletePolicy = async (policyId) => {
         try {
             await axios.delete(`https://admin.yeahtrips.in/deletecancellationpolicy/${policyId}`);
@@ -96,160 +107,177 @@ const Cancellationpolicy = () => {
     };
 
     return (
-        <div className="max-w-lg mx-auto p-8 bg-gray-100 shadow-xl rounded-lg mt-10">
-            <h2 className="text-3xl font-bold mb-6 text-center text-gray-800">
-                Add Cancellation Policies
-            </h2>
-            <form onSubmit={handleSubmit} className="space-y-6">
-                {policies.map((policy, policyIndex) => (
-                    <div key={policyIndex} className="p-4 bg-white border rounded-lg shadow-md space-y-4">
-                        <div>
-                            <label className="block text-gray-700 text-lg font-semibold mb-2">Fee Type</label>
-                            <select
-                                value={policy.feeType}
-                                onChange={(e) => handlePolicyChange(policyIndex, 'feeType', e.target.value)}
-                                className="w-full px-4 py-3 border border-gray-300 rounded-lg text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-400"
-                            >
-                                <option value="percentage">Percentage</option>
-                                <option value="amount">Amount</option>
-                            </select>
-                        </div>
+        <div>
+            <div>
+                <AdminNavbar />
+            </div>
+            <div className="max-w-6xl mx-auto p-8 bg-gray-100 shadow-2xl rounded-lg mt-10">
+                <h2 className="text-4xl font-bold mb-8 text-center text-gray-800">
+                    Add Cancellation Policies
+                </h2>
+                <form onSubmit={handleSubmit}>
+                    <table className=" w-full bg-white rounded-lg overflow-hidden shadow-md border-collapse">
+                        <thead>
+                            <tr className="bg-blue-500 text-white">
+                                <th className="py-4 px-6 text-left">Fee Type</th>
+                                <th className="py-4 px-6 text-left">Start Date</th>
+                                <th className="py-4 px-6 text-left">End Date</th>
+                                <th className="py-4 px-6 text-left">Fee</th>
+                                <th className="py-4 px-6 text-left"></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {policies.map((policy, policyIndex) => (
+                                <React.Fragment key={policyIndex}>
+                                    {policy.dateRanges.map((range, rangeIndex) => (
+                                        <tr key={rangeIndex} className="border-b">
+                                            {rangeIndex === 0 && (
+                                                <td rowSpan={policy.dateRanges.length} className="py-4 px-6">
+                                                    <select
+                                                        value={policy.feeType}
+                                                        onChange={(e) => handlePolicyChange(policyIndex, 'feeType', e.target.value)}
+                                                        className="px-4 py-2 border rounded-lg bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                    >
+                                                        <option value="percentage">Percentage</option>
+                                                        <option value="amount">Amount</option>
+                                                    </select>
+                                                </td>
+                                            )}
+                                            <td className="py-4 px-6">
+                                                <input
+                                                    type="number"
+                                                    value={range.startDate}
+                                                    onChange={(e) => handleDateRangeChange(policyIndex, rangeIndex, 'startDate', e.target.value)}
+                                                    className="max-w-lg px-4 py-2 border rounded-lg bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                    readOnly={rangeIndex > 0} // Only the first row allows an empty start date
+                                                />
+                                            </td>
+                                            <td className="py-4 px-6">
+                                                <input
+                                                    type="number"
+                                                    value={range.endDate}
+                                                    onChange={(e) => handleDateRangeChange(policyIndex, rangeIndex, 'endDate', e.target.value)}
+                                                    className="max-w-lg px-4 py-2 border rounded-lg bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                />
+                                            </td>
+                                            <td className="py-4 px-6">
+                                                <input
+                                                    type="number"
+                                                    value={range.fee}
+                                                    onChange={(e) => handleDateRangeChange(policyIndex, rangeIndex, 'fee', e.target.value)}
+                                                    className="max-w-lg px-4 py-2 border rounded-lg bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                />
+                                            </td>
+                                            <td className="py-4 px-6">
+                                                {policy.dateRanges.length > 1 && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleRemoveDateRange(policyIndex, rangeIndex)}
+                                                        className="text-red-500 hover:text-red-700 font-semibold"
+                                                    >
+                                                        Remove
+                                                    </button>
+                                                )}
+                                            </td>
+                                        </tr>
+                                    ))}
+                                    <tr>
+                                        <td colSpan={5} className="py-4 text-right">
+                                            <button
+                                                type="button"
+                                                onClick={() => handleAddDateRange(policyIndex)}
+                                                className={`font-semibold ${policy.dateRanges[policy.dateRanges.length - 1].endDate === '0'
+                                                    ? 'text-gray-500 cursor-not-allowed'
+                                                    : 'text-green-500 hover:text-green-700'
+                                                    }`}
+                                                disabled={policy.dateRanges[policy.dateRanges.length - 1].endDate === '0'}
+                                            >
+                                                + Add Date Range
+                                            </button>
+                                        </td>
+                                    </tr>
 
-                        {policy.dateRanges.map((range, rangeIndex) => (
-                            <div key={rangeIndex} className="p-4 bg-gray-50 border rounded-lg shadow-sm space-y-4">
-                                <div>
-                                    <label className="block text-gray-700 text-lg font-semibold mb-2">Start Date</label>
-                                    <input
-                                        type="number"
-                                        value={range.startDate}
-                                        onChange={(e) => handleDateRangeChange(policyIndex, rangeIndex, 'startDate', e.target.value)}
-                                        placeholder="Enter start date"
-                                        className="w-full px-4 py-3 border border-gray-300 rounded-lg text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-400"
-                                    />
-                                </div>
-
-                                <div>
-                                    <label className="block text-gray-700 text-lg font-semibold mb-2">End Date</label>
-                                    <input
-                                        type="number"
-                                        value={range.endDate}
-                                        onChange={(e) => handleDateRangeChange(policyIndex, rangeIndex, 'endDate', e.target.value)}
-                                        placeholder="Enter end date"
-                                        className="w-full px-4 py-3 border border-gray-300 rounded-lg text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-400"
-                                    />
-                                </div>
-
-                                <div>
-                                    <label className="block text-gray-700 text-lg font-semibold mb-2">
-                                        Cancellation Fee ({policy.feeType === 'percentage' ? 'Percentage' : 'Amount'})
-                                    </label>
-                                    <input
-                                        type="number"
-                                        value={range.fee}
-                                        onChange={(e) => handleDateRangeChange(policyIndex, rangeIndex, 'fee', e.target.value)}
-                                        placeholder="Enter fee"
-                                        className="w-full px-4 py-3 border border-gray-300 rounded-lg text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-400"
-                                    />
-                                </div>
-
-                                {policy.dateRanges.length > 1 && (
+                                </React.Fragment>
+                            ))}
+                            <tr>
+                                <td colSpan={5} className="py-4 text-right">
                                     <button
                                         type="button"
-                                        onClick={() => handleRemoveDateRange(policyIndex, rangeIndex)}
-                                        className="w-full bg-red-600 text-white py-2 rounded-lg shadow-md hover:bg-red-700 transition-colors duration-300"
+                                        onClick={handleAddPolicy}
+                                        className="text-blue-500 hover:text-blue-700 font-semibold"
                                     >
-                                        Remove Date Range
+                                        + Add Another Policy
                                     </button>
-                                )}
-                            </div>
-                        ))}
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
 
+                    <div className="mt-8">
                         <button
-                            type="button"
-                            onClick={() => handleAddDateRange(policyIndex)}
-                            className="w-full bg-green-600 text-white py-2 rounded-lg shadow-md hover:bg-green-700 transition-colors duration-300"
+                            type="submit"
+                            className="w-full bg-blue-600 text-white py-3 rounded-lg shadow-lg hover:bg-blue-500 transition duration-300"
                         >
-                            Add Another Date Range
+                            Submit Policies
                         </button>
-
-                        {policies.length > 1 && (
-                            <button
-                                type="button"
-                                onClick={() => handleRemovePolicy(policyIndex)}
-                                className="w-full bg-red-600 text-white py-2 rounded-lg shadow-md hover:bg-red-700 transition-colors duration-300"
-                            >
-                                Remove Policy
-                            </button>
-                        )}
                     </div>
-                ))}
+                </form>
 
-                <button
-                    type="button"
-                    onClick={handleAddPolicy}
-                    className="w-full bg-green-600 text-white py-2 rounded-lg shadow-md hover:bg-green-700 transition-colors duration-300"
-                >
-                    Add Another Policy
-                </button>
-
-                <div>
-                    <button
-                        type="submit"
-                        className="w-full bg-blue-600 text-white py-3 rounded-lg shadow-lg font-bold transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-blue-400"
-                    >
-                        Submit Policies
-                    </button>
-                </div>
-            </form>
-
-            {/* Display existing policies */}
-            <div className="mt-10">
-                <h3 className="text-3xl font-bold text-gray-900 mb-6 border-b-2 border-gray-300 pb-4">
-                    Existing Cancellation Policies
-                </h3>
-                {existingPolicies.length === 0 ? (
-                    <p className="text-gray-500 mt-4 text-lg italic">No policies found.</p>
-                ) : (
-                    existingPolicies.map((policy) => (
-                        <div
-                            key={policy.id}
-                            className="p-6 bg-gradient-to-br from-gray-50 to-gray-100 border border-gray-200 rounded-lg shadow-lg space-y-6 mt-6 hover:shadow-2xl transition-shadow duration-300"
-                        >
-                            <p className="text-xl font-semibold text-indigo-600">Policy ID: {policy.id}</p>
-                            <p className="text-lg font-medium text-gray-700">
-                                <span className="text-indigo-500">Fee Type:</span> {policy.feeType.charAt(0).toUpperCase() + policy.feeType.slice(1)}
-                            </p>
-                            <div className="space-y-4">
-                                {policy.dateRanges.map((range, rangeIndex) => (
-                                    <div
-                                        key={rangeIndex}
-                                        className="p-4 bg-indigo-50 border border-indigo-300 rounded-lg shadow-inner"
-                                    >
-                                        <p className="text-md text-gray-800">
-                                            <span className="font-semibold text-indigo-600">Start Date:</span> {range.startDate}
-                                        </p>
-                                        <p className="text-md text-gray-800">
-                                            <span className="font-semibold text-indigo-600">End Date:</span> {range.endDate}
-                                        </p>
-                                        <p className="text-md text-gray-800">
-                                            <span className="font-semibold text-indigo-600">Fee:</span> {range.fee}
-                                        </p>
-                                    </div>
+                <div className="mt-10 ">
+                    <h3 className="text-3xl font-bold text-gray-900 mb-6 border-b-2 border-gray-300 pb-4">
+                        Existing Cancellation Policies
+                    </h3>
+                    {existingPolicies.length === 0 ? (
+                        <p className="text-gray-500 mt-6">No existing policies found.</p>
+                    ) : (
+                        <table className="bg-white rounded-lg overflow-hidden shadow-md border-collapse w-full">
+                            <thead>
+                                <tr className="bg-blue-500 text-white">
+                                    <th className="py-4 px-6">Policy ID</th>
+                                    <th className="py-4 px-6">Fee Type</th>
+                                    <th className="py-4 px-6">Date Ranges</th>
+                                    <th className="py-4 px-6">Fees</th>
+                                    <th className="py-4 px-6"></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {existingPolicies.map((policy) => (
+                                    <tr key={policy.id} className="border-b">
+                                        <td className="py-4 px-6">{policy.id}</td>
+                                        <td className="py-4 px-6">{policy.feeType}</td>
+                                        <td className="py-4 px-6">
+                                            {policy.dateRanges.map((range, index) => (
+                                                <div key={index}>
+                                                    {range.startDate} - {range.endDate}
+                                                </div>
+                                            ))}
+                                        </td>
+                                        <td className="py-4 px-6">
+                                            {policy.dateRanges.map((range, index) => (
+                                                <div key={index}>
+                                                    {range.fee}
+                                                </div>
+                                            ))}
+                                        </td>
+                                        <td className="py-4 px-6 text-right">
+                                            <button
+                                                type="button"
+                                                onClick={() => handleDeletePolicy(policy.id)}
+                                                className="text-red-500 hover:text-red-700 font-semibold"
+                                            >
+                                                Delete
+                                            </button>
+                                        </td>
+                                    </tr>
                                 ))}
-                            </div>
-                            <button
-                                type="button"
-                                onClick={() => handleDeletePolicy(policy.id)}
-                                className="w-full bg-red-500 text-white py-2 rounded-lg shadow-md hover:bg-red-600 hover:shadow-lg transition-transform duration-300 transform hover:scale-105 font-bold text-lg"
-                            >
-                                Delete Policy
-                            </button>
-                        </div>
-                    ))
-                )}
-            </div>
+                            </tbody>
+                        </table>
+                    )}
+                </div>
 
+            </div>
         </div>
+
     );
 };
 

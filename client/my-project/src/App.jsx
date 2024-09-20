@@ -14,6 +14,7 @@ import Userslist from "./components/Userslist/Userslist";
 import AddCarousals from "./components/Addcorousals/Addcorousals";
 import Addreview from "./components/revies/Review";
 import Cancellationpolicy from "./components/Cancellationpolicy/Cancellationpolicy";
+import Pasttrips from "./components/Pasttrips/Passttrips";
 function App(){
        return(
         <>
@@ -32,6 +33,7 @@ function App(){
                             <Route path="/addcarousals" exact element={<AddCarousals/>} />
                             <Route path="/addreview" exact element={<Addreview/>}/>
                             <Route path="/cancellationpolicy" exact element={<Cancellationpolicy/>}/>
+                            <Route path="/pasttrips" exact element={<Pasttrips/>}/>
                      </Routes>
               </div>
         </Router>
