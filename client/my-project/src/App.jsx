@@ -15,6 +15,9 @@ import AddCarousals from "./components/Addcorousals/Addcorousals";
 import Addreview from "./components/revies/Review";
 import Cancellationpolicy from "./components/Cancellationpolicy/Cancellationpolicy";
 import Pasttrips from "./components/Pasttrips/Passttrips";
+import Supervisorpasttrips from "./components/Supervisor/Supervisorpasttrips/Supervisorpasttrips";
+import UserpasttripsDashboard from "./components/Usercomponent/Userpasttrips/Userpasttrips";
+import Readonlypastrips from "./components/readonlylogin/Readonlypasttrip";
 function App(){
        return(
         <>
@@ -34,6 +37,9 @@ function App(){
                             <Route path="/addreview" exact element={<Addreview/>}/>
                             <Route path="/cancellationpolicy" exact element={<Cancellationpolicy/>}/>
                             <Route path="/pasttrips" exact element={<Pasttrips/>}/>
+                            <Route path="/supervisorpasttrips"  exact element={<Supervisorpasttrips/>}/>
+                            <Route path="userpasttrips" exact element={<UserpasttripsDashboard/>}/>
+                            <Route path="/readonlypasttrips" exact element={<Readonlypastrips/>}/>
                      </Routes>
               </div>
         </Router>

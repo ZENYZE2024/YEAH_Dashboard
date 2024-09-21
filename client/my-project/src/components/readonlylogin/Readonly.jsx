@@ -7,6 +7,7 @@ function Readonly() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [view, setView] = useState('published'); 
+  const [searchTerm, setSearchTerm] = useState('');
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -31,17 +32,31 @@ function Readonly() {
     navigate(`/${trip_id}`);
   };
 
-  const handleViewToggle = () => {
-    setView(view === 'published' ? 'trash' : 'published');
-  };
-
   const handleLogout = () => {
-    // Remove token and role from local storage
     localStorage.removeItem('accessToken');
     localStorage.removeItem('role');
-    // Navigate to home page and replace the history entry
     navigate('/', { replace: true });
   };
+
+  // Navigate to past trips
+  const handleViewPastTrips = () => {
+    navigate('/readonlypasttrips');
+  };
+
+  // Helper function to convert date string to a proper Date object
+  const parseDate = (dateString) => {
+    const [day, month, year] = dateString.split(' ');
+    return new Date(`${month} ${day.replace(/\D/g, '')}, ${year}`);
+  };
+
+  // Filter only upcoming trips
+  const now = new Date();
+  const upcomingTrips = datas.filter((trip) => parseDate(trip.trip_start_date) >= now);
+
+  // Filter trips based on search term
+  const filteredTrips = upcomingTrips.filter((trip) =>
+    trip.trip_name.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   if (loading) return <p className="text-center text-lg text-gray-600">Loading...</p>;
   if (error) return <p className="text-center text-lg text-red-600">Error: {error}</p>;
@@ -49,7 +64,7 @@ function Readonly() {
   return (
     <div className="bg-gradient-to-br from-[#ffede8] via-[#FFFFFF] to-[#FFFFFF] min-h-screen flex flex-col items-center py-8">
       <div className="bg-white w-full max-w-screen-xl p-6 rounded-lg shadow-lg mb-6 flex justify-between items-center">
-        <h1 className="text-2xl font-bold text-gray-800">Read Only Trips</h1>
+        <h1 className="text-2xl font-bold text-gray-800">Upcoming Trips</h1>
         <button
           className="bg-gradient-to-r from-red-500 to-red-700 text-white py-2 px-4 rounded-lg shadow-lg hover:from-red-600 hover:to-red-800 focus:outline-none focus:ring-2 focus:ring-red-300 transition duration-300"
           onClick={handleLogout}
@@ -57,9 +72,33 @@ function Readonly() {
           Logout
         </button>
       </div>
-      <div className="bg-white w-full max-w-screen-xl p-6 rounded-lg shadow-lg">
+
+      {/* Search Bar */}
+      <div className="w-full max-w-screen-xl p-6 mb-6">
+        <input
+          type="text"
+          placeholder="Search Trips..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="w-full border rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-blue-300"
+        />
+      </div>
+
+      {/* Button to View Past Trips */}
+      <div className="w-full max-w-screen-xl p-6 mb-6">
+        <button
+          className="bg-gradient-to-r from-green-500 to-green-700 text-white py-2 px-4 rounded-lg shadow-lg hover:from-green-600 hover:to-green-800 focus:outline-none focus:ring-2 focus:ring-green-300 transition duration-300"
+          onClick={handleViewPastTrips}
+        >
+          View Past Trips
+        </button>
+      </div>
+
+      {/* Upcoming Trips */}
+      <div className="bg-white w-full max-w-screen-xl p-6 rounded-lg shadow-lg mb-6">
+        <h2 className="text-xl font-bold text-gray-800 mb-4">Upcoming Trips</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-          {datas.map((item) => (
+          {filteredTrips.map((item) => (
             <div
               key={item.trip_id}
               className="relative bg-white rounded-lg overflow-hidden shadow-lg transition-transform transform hover:scale-105 hover:shadow-2xl"

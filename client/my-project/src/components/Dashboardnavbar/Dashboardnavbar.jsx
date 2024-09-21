@@ -33,15 +33,16 @@ function AdminNavbar() {
                 </div>
 
                 <div className="flex items-center space-x-4 ml-auto">
+                { userRole !== 'Read-Only'  && (
                     <button
                         className="bg-gradient-to-r from-blue-500 to-blue-700 text-white py-2 px-4 rounded-lg shadow-lg hover:from-blue-600 hover:to-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-300 transition duration-300"
                         onClick={handleAddTripsClick}
                     >
                         Add Trips
                     </button>
-
+                )}
                     {/* Conditionally render the menu icon based on user role */}
-                    {userRole !== 'Trip Supervisor' && (
+                    {userRole !== 'Trip Supervisor'  && userRole !== 'Read-Only'  && (
                         <button
                             onClick={() => setShowSidebar(!showSidebar)}
                             className="text-gray-700 focus:outline-none border border-black p-2"
