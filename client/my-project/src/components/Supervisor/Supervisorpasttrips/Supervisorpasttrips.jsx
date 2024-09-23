@@ -6,7 +6,9 @@ function Supervisorpasttrips() {
   const [trips, setTrips] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [searchTerm, setSearchTerm] = useState(''); // New state for search term
+  const [searchTerm, setSearchTerm] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const tripsPerPage = 8; // Number of trips per page
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -35,7 +37,7 @@ function Supervisorpasttrips() {
 
   const handleBack = () => {
     window.history.back();
-};
+  };
 
   const getUserIdFromToken = () => {
     const token = localStorage.getItem('accessToken');
@@ -73,6 +75,14 @@ function Supervisorpasttrips() {
     trip.trip_name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  // Get current trips to display
+  const indexOfLastTrip = currentPage * tripsPerPage;
+  const indexOfFirstTrip = indexOfLastTrip - tripsPerPage;
+  const currentTrips = filteredTrips.slice(indexOfFirstTrip, indexOfLastTrip);
+
+  // Pagination logic
+  const totalPages = Math.ceil(filteredTrips.length / tripsPerPage);
+  
   if (loading) return <p className="text-center text-lg text-gray-600">Loading...</p>;
 
   return (
@@ -92,14 +102,12 @@ function Supervisorpasttrips() {
           >
             Logout
           </button>
-
           <button 
-                onClick={handleBack} 
-                className="bg-blue-500 text-white px-4 py-2 rounded-md shadow-md hover:bg-blue-600 focus:outline-none"
-            >
-                Back
-            </button>
-
+            onClick={handleBack} 
+            className="bg-blue-500 text-white px-4 py-2 rounded-md shadow-md hover:bg-blue-600 focus:outline-none"
+          >
+            Back
+          </button>
         </div>
       </div>
 
@@ -117,7 +125,7 @@ function Supervisorpasttrips() {
       {/* Past Trips Section */}
       <div className="bg-white w-full max-w-screen-xl p-6 rounded-lg shadow-lg">
         <h2 className="text-xl font-bold text-gray-800 mb-4">Past Trips</h2>
-        {filteredTrips.length === 0 ? (
+        {currentTrips.length === 0 ? (
           <p className="text-center text-lg text-gray-600">No past trips found</p>
         ) : (
           <table className="table-auto w-full text-left text-sm">
@@ -130,7 +138,7 @@ function Supervisorpasttrips() {
               </tr>
             </thead>
             <tbody>
-              {filteredTrips.map((trip) => (
+              {currentTrips.map((trip) => (
                 <tr key={trip.trip_id} className="border-t">
                   <td className="px-4 py-2">{trip.trip_name}</td>
                   <td className="px-4 py-2">{trip.trip_start_date}</td>
@@ -141,6 +149,19 @@ function Supervisorpasttrips() {
             </tbody>
           </table>
         )}
+      </div>
+
+      {/* Pagination Controls */}
+      <div className="flex justify-center mt-4">
+        {Array.from({ length: totalPages }, (_, index) => (
+          <button
+            key={index + 1}
+            onClick={() => setCurrentPage(index + 1)}
+            className={`mx-2 px-4 py-2 rounded-md ${currentPage === index + 1 ? 'bg-blue-500 text-white' : 'bg-gray-300 text-black'}`}
+          >
+            {index + 1}
+          </button>
+        ))}
       </div>
     </div>
   );

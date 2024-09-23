@@ -6,6 +6,8 @@ function UserpasttripsDashboard() {
   const [trips, setTrips] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTermPast, setSearchTermPast] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const tripsPerPage = 8; // Number of trips per page
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -32,9 +34,11 @@ function UserpasttripsDashboard() {
 
     fetchTrips();
   }, []);
+
   const handleBack = () => {
     window.history.back();
-};
+  };
+
   const getUserIdFromToken = () => {
     const token = localStorage.getItem('accessToken');
     if (!token) return null;
@@ -63,6 +67,17 @@ function UserpasttripsDashboard() {
     trip.trip_name.toLowerCase().includes(searchTermPast.toLowerCase())
   );
 
+  // Pagination Logic
+  const indexOfLastTrip = currentPage * tripsPerPage;
+  const indexOfFirstTrip = indexOfLastTrip - tripsPerPage;
+  const currentTrips = filteredPastTrips.slice(indexOfFirstTrip, indexOfLastTrip);
+
+  const totalPages = Math.ceil(filteredPastTrips.length / tripsPerPage);
+
+  const handlePageChange = (pageNum) => {
+    setCurrentPage(pageNum);
+  };
+
   if (loading) return <p className="text-center text-lg text-gray-600">Loading...</p>;
 
   return (
@@ -80,17 +95,16 @@ function UserpasttripsDashboard() {
           Logout
         </button>
 
-        
         <button 
-                onClick={handleBack} 
-                className="bg-blue-500 text-white px-4 py-2 rounded-md shadow-md hover:bg-blue-600 focus:outline-none"
-            >
-                Back
-            </button>
+          onClick={handleBack} 
+          className="bg-blue-500 text-white px-4 py-2 rounded-md shadow-md hover:bg-blue-600 focus:outline-none"
+        >
+          Back
+        </button>
       </div>
 
       {/* Past Trips */}
-      {filteredPastTrips.length > 0 && (
+      {currentTrips.length > 0 && (
         <div className="bg-white w-full max-w-screen-xl p-6 rounded-lg shadow-lg mb-6">
           <h2 className="text-xl font-semibold mb-4">Past Trips</h2>
           <input
@@ -110,7 +124,7 @@ function UserpasttripsDashboard() {
               </tr>
             </thead>
             <tbody>
-              {filteredPastTrips.map((trip) => (
+              {currentTrips.map((trip) => (
                 <tr key={trip.trip_id} className="hover:bg-gray-100">
                   <td className="py-2 px-4 border-b">{trip.trip_name}</td>
                   <td className="py-2 px-4 border-b">{trip.trip_start_date}</td>
@@ -120,6 +134,19 @@ function UserpasttripsDashboard() {
               ))}
             </tbody>
           </table>
+
+          {/* Pagination Controls */}
+          <div className="flex justify-center mt-4">
+            {Array.from({ length: totalPages }, (_, index) => (
+              <button
+                key={index + 1}
+                onClick={() => handlePageChange(index + 1)}
+                className={`mx-1 px-3 py-1 rounded-lg ${currentPage === index + 1 ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}
+              >
+                {index + 1}
+              </button>
+            ))}
+          </div>
         </div>
       )}
     </div>

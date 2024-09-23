@@ -6,8 +6,10 @@ function Readonlypastrips() {
   const [datas, setDatas] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [view, setView] = useState('published'); 
+  const [view, setView] = useState('published');
   const [searchQuery, setSearchQuery] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const tripsPerPage = 8; // Number of trips per page
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -53,14 +55,22 @@ function Readonlypastrips() {
     trip.trip_name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  // Pagination Logic
+  const indexOfLastTrip = currentPage * tripsPerPage;
+  const indexOfFirstTrip = indexOfLastTrip - tripsPerPage;
+  const currentTrips = filteredTrips.slice(indexOfFirstTrip, indexOfLastTrip);
+  const totalPages = Math.ceil(filteredTrips.length / tripsPerPage);
+
+  const handlePageChange = (pageNum) => {
+    setCurrentPage(pageNum);
+  };
+
   if (loading) return <p className="text-center text-lg text-gray-600">Loading...</p>;
   if (error) return <p className="text-center text-lg text-red-600">Error: {error}</p>;
 
-
   const handleBack = () => {
     window.history.back();
-};
-
+  };
 
   return (
     <div className="bg-gradient-to-br from-[#ffede8] via-[#FFFFFF] to-[#FFFFFF] min-h-screen flex flex-col items-center py-8">
@@ -72,14 +82,12 @@ function Readonlypastrips() {
         >
           Logout
         </button>
-
         <button 
-                onClick={handleBack} 
-                className="bg-blue-500 text-white px-4 py-2 rounded-md shadow-md hover:bg-blue-600 focus:outline-none"
-            >
-                Back
-            </button>
-            
+          onClick={handleBack} 
+          className="bg-blue-500 text-white px-4 py-2 rounded-md shadow-md hover:bg-blue-600 focus:outline-none"
+        >
+          Back
+        </button>
       </div>
 
       {/* Search Input */}
@@ -107,7 +115,7 @@ function Readonlypastrips() {
             </tr>
           </thead>
           <tbody>
-            {filteredTrips.map((item) => (
+            {currentTrips.map((item) => (
               <tr key={item.trip_id}>
                 <td className="border px-4 py-2">{item.trip_name}</td>
                 <td className="border px-4 py-2">{item.trip_start_date}</td>
@@ -125,6 +133,19 @@ function Readonlypastrips() {
             ))}
           </tbody>
         </table>
+
+        {/* Pagination Controls */}
+        <div className="flex justify-center mt-4">
+          {Array.from({ length: totalPages }, (_, index) => (
+            <button
+              key={index + 1}
+              onClick={() => handlePageChange(index + 1)}
+              className={`mx-1 px-3 py-1 rounded-lg ${currentPage === index + 1 ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}
+            >
+              {index + 1}
+            </button>
+          ))}
+        </div>
       </div>
     </div>
   );

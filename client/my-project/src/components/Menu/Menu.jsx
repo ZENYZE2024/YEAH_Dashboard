@@ -47,6 +47,11 @@ const Menu = ({ showSidebar, setShowSidebar }) => {
         navigate('/cancellationpolicy');
     };
 
+    const handleCreateDiscountCouponClick = () => {
+        setShowSidebar(false);
+        navigate('/discountcoupon');  // Navigating to the discount coupon page
+    };
+
     const handleAddCommunityLinkClick = () => setShowCommunityLinkInput(!showCommunityLinkInput);
 
     const handleSaveCommunityLink = async () => {
@@ -131,6 +136,11 @@ const Menu = ({ showSidebar, setShowSidebar }) => {
                                     </div>
                                 </div>
                             )}
+                        </li>
+                        <li>
+                            <button onClick={handleCreateDiscountCouponClick} className="w-full text-left py-3 border-2 border-yellow-600 rounded-lg text-yellow-600 font-semibold shadow-md hover:shadow-lg transition-all duration-300">
+                                Create Discount Coupon
+                            </button>
                         </li>
                         <li>
                             <button onClick={handleCancellationPolicyClick} className="w-full text-left py-3 border-2 border-green-600 rounded-lg text-green-600 font-semibold shadow-md hover:shadow-lg transition-all duration-300">

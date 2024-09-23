@@ -228,22 +228,36 @@ function Edittrips() {
     return XLSX.write(workbook, { bookType: "xlsx", type: "array" });
   };
 
-  // Handle download based on selected format
-  const handleDownload = (format) => {
+  const handleDownload = (format, isCancellation = false) => {
+    const tripcode = tripDetails.trip_code;
+    const trip_name = tripDetails.trip_name;
+    const fileName = `YH-${tripcode}-${trip_name}`;
+
+    const data = isCancellation ? cancellations : bookings; // Select data source
+    let blob;
+
     if (format === "VCF") {
-      const vcfData = convertToVCF(bookings);
-      const blob = new Blob([vcfData], { type: "text/vcard" });
-      saveAs(blob, "contacts.vcf");
+      const vcfData = convertToVCF(data);
+      blob = new Blob([vcfData], { type: "text/vcard" });
+      saveAs(blob, `${fileName}.vcf`);
     } else if (format === "CSV") {
-      const csvData = convertToCSV(bookings);
-      const blob = new Blob([csvData], { type: "text/csv" });
-      saveAs(blob, "contacts.csv");
+      const csvData = convertToCSV(data);
+      blob = new Blob([csvData], { type: "text/csv" });
+      saveAs(blob, `${fileName}.csv`);
     } else if (format === "Excel") {
-      const excelData = convertToExcel(bookings);
-      const blob = new Blob([excelData], { type: "application/octet-stream" });
-      saveAs(blob, "contacts.xlsx");
+      const excelData = convertToExcel(data);
+      blob = new Blob([excelData], { type: "application/octet-stream" });
+      saveAs(blob, `${fileName}.xlsx`);
+    }
+
+    if (blob) {
+      setTimeout(() => {
+        URL.revokeObjectURL(blob);
+      }, 100);
     }
   };
+
+
 
   const handleEditToggle = () => {
     setIsEditing(!isEditing);
@@ -611,13 +625,12 @@ function Edittrips() {
               {coordinators.map((coordinator, index) => (
                 <div key={coordinator.cordinator_id} className="bg-gray-100 p-4 rounded-md shadow-sm">
                   <img
-                    src={`https://admin.yeahtrips.in${coordinator.image}`} // Ensure URL is valid
+                    src={`https://admin.yeahtrips.in${coordinator.image}`}
                     alt={coordinator.name}
                     className="w-24 h-24 rounded-full mx-auto"
                   />
                   {isEditingcordinators === index ? (
                     <div>
-                      {/* Image Upload */}
                       <input
                         type="file"
                         name="image"
@@ -699,12 +712,12 @@ function Edittrips() {
                       <p className="text-center text-gray-600 mt-2">{coordinator.email}</p>
 
                       {role !== 'Read-Only' && role !== 'User' && (
-                      <button
-                        onClick={() => handleEditcordinatorClick(index)}
-                        className="block mx-auto mt-4 bg-blue-500 text-white px-4 py-2 rounded-md shadow-md hover:bg-blue-600"
-                      >
-                        Edit
-                      </button>
+                        <button
+                          onClick={() => handleEditcordinatorClick(index)}
+                          className="block mx-auto mt-4 bg-blue-500 text-white px-4 py-2 rounded-md shadow-md hover:bg-blue-600"
+                        >
+                          Edit
+                        </button>
                       )}
                     </div>
                   )}
@@ -731,12 +744,12 @@ function Edittrips() {
                   <p><strong>Fee:</strong> {policy.fee}%</p>
                   <p><strong>Type:</strong> {policy.cancellationType}</p>
                   {role !== 'Read-Only' && role !== 'User' && (
-                  <button
-                    onClick={() => handleEditPolicyClick(index)}
-                    className="block mx-auto mt-4 bg-blue-500 text-white px-4 py-2 rounded-md shadow-md hover:bg-blue-600"
-                  >
-                    Edit
-                  </button>
+                    <button
+                      onClick={() => handleEditPolicyClick(index)}
+                      className="block mx-auto mt-4 bg-blue-500 text-white px-4 py-2 rounded-md shadow-md hover:bg-blue-600"
+                    >
+                      Edit
+                    </button>
                   )}
                   {isEditingcancellationpolicy === index ? (
                     <div>
@@ -798,13 +811,14 @@ function Edittrips() {
             <select
               id="download-format"
               onChange={(e) => handleDownload(e.target.value)}
-              className="border  border-2 border-gray-400"
+              className="border border-2 border-gray-400"
             >
               <option value="">Select format</option>
               <option value="VCF">VCF</option>
               <option value="CSV">CSV</option>
               <option value="Excel">Excel</option>
             </select>
+
           </div>
         </div>
         <div className="p-6">
@@ -844,15 +858,16 @@ function Edittrips() {
         <div className="ml-8">
           <label htmlFor="download-format" className="text-blue-700  ">Download as: </label>
           <select
-            id="download-format"
-            onChange={(e) => handleDownload(e.target.value)}
-            className="border  border-2 border-gray-400"
+            id="download-format-cancellations"
+            onChange={(e) => handleDownload(e.target.value, true)}
+            className="border border-2 border-gray-400"
           >
             <option value="">Select format</option>
             <option value="VCF">VCF</option>
             <option value="CSV">CSV</option>
             <option value="Excel">Excel</option>
           </select>
+
         </div>
         <div className="p-6">
           <table className="min-w-full divide-y divide-gray-200 border border-gray-300">
@@ -876,7 +891,7 @@ function Edittrips() {
                   <td className="px-6 py-4 whitespace-nowrap">{item.fullname}</td>
                   <td className="px-6 py-4 whitespace-nowrap">{item.phonenumber}</td>
                   <td className="px-6 py-4 whitespace-nowrap">{item.email}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">{item.reason}</td>
+                  <td className="px-6 py-4 whitespace-nowrap">{item.reasons}</td>
                   <td className="px-6 py-4 whitespace-nowrap">{item.amount}</td>
                   <td className="px-6 py-4 whitespace-nowrap">{item.payment_id}</td>
                 </tr>

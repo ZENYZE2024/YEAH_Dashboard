@@ -1422,6 +1422,142 @@ app.delete('/deletecancellationpolicy/:id', async (req, res) => {
     }
 });
 
+app.post('/discountcoupons', async (req, res) => {
+    const { couponCode, discountTypes, range, expiryDate, isActive, emails } = req.body;
+    
+    console.log(req.body);
+    
+    if (!couponCode || !range.min || !range.max || !expiryDate) {
+        return res.status(400).send({ message: 'Invalid input' });
+    }
+
+    try {
+        const connection = await pool.getConnection();
+
+        const discountType = discountTypes.percentage ? 'percentage' : 'amount';
+        const minAmount = range.min;
+        const maxAmount = range.max;
+
+        const query = `
+            INSERT INTO coupons (coupon_code, discount_type, min_amount, max_amount, expiry_date, is_active) 
+            VALUES (?, ?, ?, ?, ?, ?)
+        `;
+        const [result] = await connection.query(query, [
+            couponCode,
+            discountType,
+            minAmount,
+            maxAmount,
+            expiryDate,
+            isActive,
+        ]);
+
+        const couponId = result.insertId;
+
+        if (emails && emails.length > 0) {
+            const emailQuery = `INSERT INTO coupon_emails (coupon_id, email) VALUES ?`;
+            const emailValues = emails.map((email) => [couponId, email]);
+
+            await connection.query(emailQuery, [emailValues]);
+        }
+
+        connection.release();
+
+        res.status(200).send({ message: 'Coupon created successfully!' });
+    } catch (error) {
+        console.error('Error creating coupon:', error);
+        res.status(500).send({ message: 'Error creating coupon.' });
+    }
+});
+
+app.get('/getthecoupondetails', async (req, res) => {
+    try {
+        const connection = await pool.getConnection();
+
+        // Query to get the coupon details
+        const couponQuery = `
+            SELECT c.id AS coupon_id, c.coupon_code, c.discount_type, c.min_amount, c.max_amount, c.expiry_date, c.is_active,
+            GROUP_CONCAT(ce.email) AS emails
+            FROM coupons c
+            LEFT JOIN coupon_emails ce ON c.id = ce.coupon_id
+            GROUP BY c.id
+        `;
+        
+        const [coupons] = await connection.query(couponQuery);
+
+        connection.release();
+
+        if (coupons.length === 0) {
+            return res.status(404).send({ message: 'No coupons found' });
+        }
+
+        // Send the coupon details as a response
+        res.status(200).send({ coupons });
+    } catch (error) {
+        console.error('Error fetching coupon details:', error);
+        res.status(500).send({ message: 'Error fetching coupon details.' });
+    }
+});
+
+app.put('/discountcoupons/:coupon_id', async (req, res) => {
+    const couponId = req.params.coupon_id; // Get the coupon ID from the request parameters
+    const { couponCode, discountTypes, range, expiryDate, isActive, emails } = req.body;
+
+    console.log(req.body); // Log incoming request body
+
+    // Validate input
+    if (!couponCode || !range.min || !range.max || !expiryDate) {
+        return res.status(400).send({ message: 'Invalid input' });
+    }
+
+    // Extract only the date part from expiryDate
+    const formattedExpiryDate = expiryDate.split('T')[0]; // Get the date in 'YYYY-MM-DD' format
+
+    let connection;
+    try {
+        connection = await pool.getConnection();
+
+        const discountType = discountTypes.percentage ? 'percentage' : 'amount';
+        const minAmount = range.min;
+        const maxAmount = range.max;
+
+        // Update coupon details
+        const query = `
+            UPDATE coupons 
+            SET coupon_code = ?, discount_type = ?, min_amount = ?, max_amount = ?, expiry_date = ?, is_active = ? 
+            WHERE id = ?
+        `;
+        await connection.query(query, [
+            couponCode,
+            discountType,
+            minAmount,
+            maxAmount,
+            formattedExpiryDate, // Use the formatted date here
+            isActive,
+            couponId, // This corresponds to the 'id' in your coupons table
+        ]);
+
+        // Update email list
+        await connection.query(`DELETE FROM coupon_emails WHERE coupon_id = ?`, [couponId]);
+
+        if (emails && emails.length > 0) {
+            const emailQuery = `INSERT INTO coupon_emails (coupon_id, email) VALUES ?`;
+            const emailValues = emails.map((email) => [couponId, email]);
+            await connection.query(emailQuery, [emailValues]);
+        }
+
+        res.status(200).send({ message: 'Coupon updated successfully!' });
+    } catch (error) {
+        console.error('Error updating coupon:', error.message);
+        console.error('Stack trace:', error.stack);
+        res.status(500).send({ message: 'Error updating coupon.' });
+    } finally {
+        if (connection) connection.release(); // Ensure connection is released
+    }
+});
+
+
+
+
 app.use(express.static(path.join(__dirname, 'public')));
 
 app.get('*', (req, res) => {
