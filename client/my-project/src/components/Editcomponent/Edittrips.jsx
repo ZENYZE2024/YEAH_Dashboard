@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { useLocation, useParams, useNavigate } from "react-router-dom";
 import { saveAs } from "file-saver";
+import { format } from 'date-fns';
 import * as XLSX from "xlsx";
 import AdminNavbar from "../Dashboardnavbar/Dashboardnavbar";
 function Edittrips() {
@@ -46,7 +47,7 @@ function Edittrips() {
         setCancellationPolicies(Array.isArray(cancellationPoliciesResponse.data) ? cancellationPoliciesResponse.data : []);
 
         console.log("Trip Details:", detailsResponse.data);
-        console.log("Trip Itinerary:", tripItinerary);
+        console.log("Trip Itinerary:", itineraryResponse.data);
         console.log("Bookings:", bookings);
         console.log("cancellation", cancellations);
         console.log("Coordinators:", coordinatorsResponse.data);
@@ -332,6 +333,7 @@ function Edittrips() {
 
       setIsEditing(false); // Exit edit mode after successful save
       alert('Trip details updated successfully!');
+      window.location.reload();
     } catch (error) {
       console.error("Error saving trip details:", error);
       alert('Failed to update trip details.');
@@ -346,7 +348,6 @@ function Edittrips() {
     setEditingDayIndex(index); // Set the day being edited
   };
 
-  // Function to handle image change for the specific day
   const handleItineraryImageChange = (event, dayIndex) => {
     const file = event.target.files[0];
     setSelectedItineraryImages((prevImages) => ({
@@ -421,6 +422,14 @@ function Edittrips() {
     setIsEditingItinerary(!isEditingItinerary);
     setEditingDayIndex(null);  // Reset editing day when toggling edit mode
   };
+  const formatDetails = (details) => {
+    return details.split('. ').map((item, index) => (
+      <div key={index}>{item.trim()}.</div>
+    ));
+  };
+
+
+
   return (
     <div>
       <div>
@@ -521,6 +530,7 @@ function Edittrips() {
                 tripItinerary.map((item, index) => {
                   // Correct the image path format (if image exists)
                   const correctedImagePath = item.DAY_IMG ? item.DAY_IMG.replace(/\\/g, '/') : '';
+                  console.log(`Trip Itinerary Day ${item.DAY} - Image Path: ${correctedImagePath}`);
 
                   return (
                     <div key={index} className="bg-gray-100 p-4 rounded-md shadow-sm">
@@ -536,18 +546,23 @@ function Edittrips() {
                               className="border rounded w-32 p-2"
                             />
 
-                            {item.DAY_IMG && (
+                            {correctedImagePath && (
                               <img
                                 src={`https://admin.yeahtrips.in${correctedImagePath}`}
-                                alt={`Itinerary for day ${index + 1}`}
-                                style={{ width: 'auto', height: '20vh' }}
+                                alt={`Day ${item.DAY} Image`}
+                                onError={(e) => {
+                                  e.target.onerror = null; // Prevents infinite loop if the image fails to load
+                                  e.target.src = '/path/to/placeholder-image.jpg'; // Placeholder if image fails
+                                }}
+                                style={{ width: '50vw', height: '30vh', objectFit: 'cover' }}
                               />
                             )}
+
                             <input
                               type="file"
                               accept="image/*"
                               onChange={(event) => handleItineraryImageChange(event, index)}
-                              className="border rounded w-full p-2"
+                              className="border rounded w-full p-2 mt-2"
                             />
                           </div>
 
@@ -906,27 +921,106 @@ function Edittrips() {
 
   );
 }
+const formatDateForInput = (dateString) => {
+  const dateParts = dateString.split(' ');
+  const day = dateParts[0].replace(/\D/g, ''); // Extract numerical part of day
+  const month = dateParts[1];
+  const year = dateParts[2];
 
-function renderDetail(label, name, details, isEditing, handleChange) {
+  const monthIndex = getMonthIndex(month);
+  return `${year}-${monthIndex < 10 ? '0' + monthIndex : monthIndex}-${day.padStart(2, '0')}`; // Format as YYYY-MM-DD
+};
+
+// Function to format date to display (e.g., "12th September 2024")
+const formatDateToDisplay = (inputDate) => {
+  const date = new Date(inputDate);
+  const options = { day: 'numeric', month: 'long', year: 'numeric' };
+  const formattedDate = date.toLocaleDateString('en-GB', options);
+
+  // Add ordinal suffix to day
+  const dayWithSuffix = addOrdinalSuffix(formattedDate.split(' ')[0]);
+  return `${dayWithSuffix} ${formattedDate.split(' ').slice(1).join(' ')}`;
+};
+
+// Helper function to get month index
+const getMonthIndex = (month) => {
+  const months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+  return months.indexOf(month) + 1; // Months are 1-indexed
+};
+
+// Add ordinal suffix to the day
+const addOrdinalSuffix = (day) => {
+  const suffix = ["th", "st", "nd", "rd"];
+  const value = parseInt(day, 10);
+  const index = (value % 10 <= 3 && value % 100 !== 11 && value % 100 !== 12 && value % 100 !== 13) ? value % 10 : 0;
+  return `${value}${suffix[index] || suffix[0]}`; // Default to "th"
+};
+const renderDetail = (label, name, tripDetails, isEditing, handleInputChange) => {
+  // Get the value from tripDetails
+  let value = tripDetails[name];
+
+  // Handle numeric values for cost, seats, etc.
+  if (typeof value === 'number') {
+    value = value.toString(); // Convert number to string for display
+  }
+
+  // Specific formatting for Inclusion, Exclusion, and Points to Note
+  const isSpecialField = name === 'inclusion' || name === 'exclusion' || name === 'points_to_note';
+
+  // Split the string into lines if it's a special field
+  const displayValue = isSpecialField && typeof value === 'string'
+    ? value.split('.').map(line => line.trim()).filter(line => line)
+    : [value];
+
+  // Handle date fields separately
+  const isDateField = name === 'trip_start_date' || name === 'end_date';
+
   return (
-    <div className="mb-2">
-      <label className="block text-gray-700 font-semibold">{label}</label>
+    <div className="flex flex-col">
+      <label htmlFor={name} className="font-semibold">
+        {label}
+      </label>
       {isEditing ? (
-        <input
-          type="text"
-          name={name}
-          value={details[name]}
-          onChange={handleChange}
-          className="border rounded w-full p-2"
-        />
+        isDateField ? (
+          <input
+            type="date"
+            id={name}
+            name={name}
+            value={formatDateForInput(value)} // Use helper function to format date for input
+            onChange={(e) => {
+              const selectedDate = new Date(e.target.value);
+              // Format it back to the desired format
+              const formattedDate = formatDateToDisplay(selectedDate);
+              handleInputChange({ target: { name, value: formattedDate } });
+            }}
+            className="border border-gray-300 rounded p-2"
+          />
+        ) : (
+          <textarea
+            id={name}
+            name={name}
+            value={value}
+            onChange={handleInputChange}
+            rows="4"
+            className="border border-gray-300 rounded p-2"
+            placeholder={`Enter ${label}`}
+          />
+        )
       ) : (
-        <p>{details[name]}</p>
+        <p className="border border-gray-300 rounded p-2 whitespace-pre-line">
+          {displayValue.map((line, index) => (
+            <span key={index}>
+              {line}
+              {index < displayValue.length - 1 && <br />} {/* Add line breaks for special fields */}
+            </span>
+          ))}
+        </p>
       )}
-
-
     </div>
   );
-}
+};
+
+
 
 export default Edittrips;
 

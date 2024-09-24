@@ -341,12 +341,14 @@ app.get('/cancellationpolicies/:trip_id', async (req, res) => {
         if (connection) connection.release();
     }
 });
-
 app.put('/updatetrip', upload.single('trip_image'), async (req, res) => {
     const tripDetails = req.body;
     const trip_id = tripDetails.trip_id;
-    console.log(trip_id)
-    console.log(req.body)
+    const { trip_start_date, end_date, ...otherDetails } = tripDetails;
+
+    console.log("Trip ID:", trip_id);
+    console.log("Received Trip Data:", req.body);
+
     try {
         // Establish database connection
         const connection = await pool.getConnection();
@@ -355,10 +357,8 @@ app.put('/updatetrip', upload.single('trip_image'), async (req, res) => {
             // Start the transaction
             await connection.beginTransaction();
 
-            // Destructure to exclude file_path and trip_id from updateFields
+            // Update trip details in the tripdata table
             const { file_path, ...updateFields } = tripDetails;
-
-            // Update the trip data if there are fields to update
             const setClause = Object.keys(updateFields)
                 .map(key => `${key} = ?`)
                 .join(', ');
@@ -367,41 +367,70 @@ app.put('/updatetrip', upload.single('trip_image'), async (req, res) => {
                 const sqlUpdate = `UPDATE tripdata SET ${setClause} WHERE trip_id = ?`;
                 const valuesUpdate = [...Object.values(updateFields), trip_id];
                 await connection.query(sqlUpdate, valuesUpdate);
+                console.log("Trip details updated in tripdata table");
             }
 
             // Handle the image file update if a new file is uploaded
             if (req.file) {
-                const newFilePath = `/uploads/${req.file.filename}`; // Construct new file path
-
+                const newFilePath = `/uploads/${req.file.filename}`;
                 const [rows] = await connection.query('SELECT * FROM images WHERE trip_id = ?', [trip_id]);
-                console.log(newFilePath)
 
                 let sql;
                 let values;
 
                 if (rows.length > 0) {
-                    // Update existing image entry if it exists
                     sql = 'UPDATE images SET file_path = ? WHERE trip_id = ?';
                     values = [newFilePath, trip_id];
-                    console.log("image upodated")
                 } else {
-                    // Insert new image entry if no previous entry exists
                     sql = 'INSERT INTO images (trip_id, file_path) VALUES (?, ?)';
                     values = [trip_id, newFilePath];
                 }
 
                 await connection.query(sql, values);
+                console.log("Image file updated");
+            }
+
+            // Update the itinerary dates
+            if (trip_start_date && end_date) {
+                console.log("Trip start date:", trip_start_date);
+                console.log("Trip end date:", end_date);
+
+                // Fetch the itinerary entries for the given trip_id
+                const [itineraryRows] = await connection.query('SELECT * FROM tripitenary WHERE TRIP_ID = ?', [trip_id]);
+
+                console.log("Itinerary Rows:", itineraryRows);
+                if (itineraryRows.length > 0) {
+                    const firstDay = itineraryRows[0];
+                    const lastDay = itineraryRows[itineraryRows.length - 1];
+
+                    console.log("First Day:", firstDay);
+                    console.log("Last Day:", lastDay);
+
+                    // Update the first day with the start date
+                    const resultFirstDay = await connection.query(
+                        'UPDATE tripitenary SET DATE = ? WHERE TRIP_ID = ? AND DAY = ?',
+                        [trip_start_date, trip_id, firstDay.DAY]
+                    );
+
+                    // Update the last day with the end date
+                    const resultLastDay = await connection.query(
+                        'UPDATE tripitenary SET DATE = ? WHERE TRIP_ID = ? AND DAY = ?',
+                        [end_date, trip_id, lastDay.DAY]
+                    );
+                } else {
+                    console.log("No itinerary data found for trip_id:", trip_id);
+                }
             }
 
             // Commit the transaction if everything is successful
             await connection.commit();
-            res.json({ message: 'Trip details and image file updated successfully!' });
+            res.json({ message: 'Trip details, itinerary dates, and image file updated successfully!' });
 
         } catch (err) {
             // Rollback the transaction if an error occurs
             await connection.rollback();
             console.error('Transaction Error:', err);
-            res.status(500).json({ error: 'Failed to update trip details or image.' });
+            res.status(500).json({ error: 'Failed to update trip details, itinerary, or image.' });
         } finally {
             // Release the connection back to the pool
             connection.release();
@@ -413,6 +442,9 @@ app.put('/updatetrip', upload.single('trip_image'), async (req, res) => {
         res.status(500).json({ error: 'Database connection failed.' });
     }
 });
+
+
+
 
 app.put('/updatetinerary/:dayIndex', upload.single('image'), async (req, res) => {
     const dayIndex = parseInt(req.params.dayIndex, 10);  // Get the specific day index from the route and parse to integer
