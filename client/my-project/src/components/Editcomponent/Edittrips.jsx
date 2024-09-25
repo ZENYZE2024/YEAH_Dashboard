@@ -32,7 +32,7 @@ function Edittrips() {
         const [detailsResponse, itineraryResponse, bookingsResponse, cancellationsresponse, coordinatorsResponse, cancellationPoliciesResponse] = await Promise.all([
           axios.get(`https://admin.yeahtrips.in/editdetailstrips/${trip_id}`),
 
-          axios.get(`https://admin.yeahtrips.in/tripitenary/${trip_id}`),
+          axios.get(`http://admin.yeahtrips.in/tripitenary/${trip_id}`),
           axios.get(`https://admin.yeahtrips.in/getbookingdetails/${trip_id}`),
           axios.get(`https://admin.yeahtrips.in/cancellations/${trip_id}`),
           axios.get(`https://admin.yeahtrips.in/getcoordinatordetails/${trip_id}`),
@@ -48,7 +48,7 @@ function Edittrips() {
 
         console.log("Trip Details:", detailsResponse.data);
         console.log("Trip Itinerary:", itineraryResponse.data);
-        console.log("Bookings:", bookings);
+        console.log("Bookings:", bookingsResponse.data);
         console.log("cancellation", cancellations);
         console.log("Coordinators:", coordinatorsResponse.data);
 
@@ -837,36 +837,47 @@ function Edittrips() {
           </div>
         </div>
         <div className="p-6">
-          <table className="min-w-full divide-y divide-gray-200 border border-gray-300">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Booking ID</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Order ID</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Full Name</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Age</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Phone Number</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Whatsapp Number</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">State</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">City</th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {bookings.map((bookings, index) => (<tr key={bookings.trip_id}>
-                <td className="px-6 py-4 whitespace-nowrap">{bookings.booking_id}</td>
-                <td className="px-6 py-4 whitespace-nowrap">{bookings.order_id}</td>
-                <td className="px-6 py-4 whitespace-nowrap">{bookings.fullname}</td>
-                <td className="px-6 py-4 whitespace-nowrap">{bookings.age}</td>
-                <td className="px-6 py-4 whitespace-nowrap">{bookings.email}</td>
-                <td className="px-6 py-4 whitespace-nowrap">{bookings.phonenumber}</td>
-                <td className="px-6 py-4 whitespace-nowrap">{bookings.whatsappnumber}</td>
-                <td className="px-6 py-4 whitespace-nowrap">{bookings.member_state}</td>
-                <td className="px-6 py-4 whitespace-nowrap">{bookings.city}</td>
-              </tr>
-              ))}
-            </tbody>
-          </table>
+          {/* Add a wrapper div for horizontal scrolling on small screens */}
+          <div className="overflow-x-auto">
+            <table className="table-auto min-w-full divide-y divide-gray-200 border border-gray-300">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Booking ID</th>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Order ID</th>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Full Name</th>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Age</th>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Phone Number</th>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">WhatsApp Number</th>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">State</th>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">City</th>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount Paid</th>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Coupon Code</th>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Discount Amount</th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {bookings.map((booking, index) => (
+                  <tr key={booking.trip_id}>
+                    <td className="px-4 py-2 whitespace-nowrap">{booking.booking_id}</td>
+                    <td className="px-4 py-2 whitespace-nowrap">{booking.order_id}</td>
+                    <td className="px-4 py-2 whitespace-normal break-words">{booking.fullname}</td> {/* Enable text wrapping */}
+                    <td className="px-4 py-2 whitespace-nowrap">{booking.age}</td>
+                    <td className="px-4 py-2 whitespace-normal break-words">{booking.email}</td> {/* Enable text wrapping */}
+                    <td className="px-4 py-2 whitespace-nowrap">{booking.phonenumber}</td>
+                    <td className="px-4 py-2 whitespace-nowrap">{booking.whatsappnumber}</td>
+                    <td className="px-4 py-2 whitespace-nowrap">{booking.member_state}</td>
+                    <td className="px-4 py-2 whitespace-nowrap">{booking.city}</td>
+                    <td className="px-4 py-2 whitespace-nowrap">{booking.bookingDetails?.amount_paid}</td>
+                    <td className="px-4 py-2 whitespace-nowrap">{booking.bookingDetails?.couponcode}</td>
+                    <td className="px-4 py-2 whitespace-nowrap">{booking.bookingDetails?.discount_amount}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
+
       </div>
       <div>
         <h1 className="text-center font-extrabold  max-w-4xl mx-auto mt-8 text-2xl">CANCELATIONS</h1>
@@ -885,7 +896,7 @@ function Edittrips() {
 
         </div>
         <div className="p-6">
-          <table className="min-w-full divide-y divide-gray-200 border border-gray-300">
+          <table className="overflow-x-auto">
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Booking ID</th>

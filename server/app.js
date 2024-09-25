@@ -823,29 +823,59 @@ app.put('/deletetrips/:trip_id', async (req, res) => {
     }
 });
 
-
-
 app.get('/getbookingdetails/:trip_id', async (req, res) => {
     const trip_id = req.params.trip_id;
-    console.log("id for bookings", trip_id)
+    console.log("id for bookings", trip_id);
+
     if (!trip_id) {
         return res.status(400).json({ message: 'Trip ID is required' });
     }
+
     try {
         const connection = await pool.getConnection();
 
-        const [rows] = await connection.query(`
-             SELECT * FROM members WHERE trip_id = ?
-            `, [trip_id]);
+        // Query to get data from the members table using trip_id
+        const [membersRows] = await connection.query(`
+            SELECT * FROM members WHERE trip_id = ?
+        `, [trip_id]);
+
+        if (membersRows.length === 0) {
+            connection.release();
+            return res.status(404).json({ message: 'No members found for the given trip ID' });
+        }
+
+        // Extract booking_id from membersRows
+        const bookingIds = membersRows.map(member => member.booking_id);
+
+        if (bookingIds.length === 0) {
+            connection.release();
+            return res.status(404).json({ message: 'No booking IDs found in the members table' });
+        }
+
+        // Query to get data from the bookings table using the booking_id(s)
+        const [bookingsRows] = await connection.query(`
+            SELECT * FROM bookings WHERE booking_id IN (?)
+        `, [bookingIds]);
 
         connection.release();
-        console.log("rows", rows)
-        res.json(rows);
+
+        // Combine members data and bookings data
+        const combinedData = membersRows.map(member => {
+            const booking = bookingsRows.find(booking => booking.booking_id === member.booking_id);
+            return {
+                ...member,
+                bookingDetails: booking || null // Attach booking details or null if not found
+            };
+        });
+
+        // Send the combined data as the response
+        res.json(combinedData);
     } catch (error) {
-        console.error('Error connecting to the database:', err);
+        console.error('Error connecting to the database:', error);
         res.status(500).json({ error: 'Database connection failed' });
     }
-})
+});
+
 app.get('/cancellations/:trip_id', async (req, res) => {
     const trip_id = req.params.trip_id
 
