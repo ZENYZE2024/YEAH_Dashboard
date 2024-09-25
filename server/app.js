@@ -839,37 +839,38 @@ app.get('/getbookingdetails/:trip_id', async (req, res) => {
             SELECT * FROM members WHERE trip_id = ?
         `, [trip_id]);
 
+        // Check if there are no members, but don't throw an error
         if (membersRows.length === 0) {
             connection.release();
-            return res.status(404).json({ message: 'No members found for the given trip ID' });
+            return res.json([]);  // Return an empty array if no members are found
         }
 
-        // Extract booking_id from membersRows
+        // Extract booking_ids from membersRows
         const bookingIds = membersRows.map(member => member.booking_id);
 
+        // Check if there are no booking IDs, but don't throw an error
         if (bookingIds.length === 0) {
             connection.release();
-            return res.status(404).json({ message: 'No booking IDs found in the members table' });
+            return res.json([]);  
         }
 
-        // Query to get data from the bookings table using the booking_id(s)
         const [bookingsRows] = await connection.query(`
             SELECT * FROM bookings WHERE booking_id IN (?)
         `, [bookingIds]);
 
         connection.release();
 
-        // Combine members data and bookings data
         const combinedData = membersRows.map(member => {
             const booking = bookingsRows.find(booking => booking.booking_id === member.booking_id);
             return {
                 ...member,
-                bookingDetails: booking || null // Attach booking details or null if not found
+                bookingDetails: booking || null  // Attach booking details or null if not found
             };
         });
 
         // Send the combined data as the response
         res.json(combinedData);
+        console.log(combinedData);
     } catch (error) {
         console.error('Error connecting to the database:', error);
         res.status(500).json({ error: 'Database connection failed' });
