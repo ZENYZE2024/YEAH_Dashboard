@@ -32,7 +32,7 @@ function Edittrips() {
         const [detailsResponse, itineraryResponse, bookingsResponse, cancellationsresponse, coordinatorsResponse, cancellationPoliciesResponse] = await Promise.all([
           axios.get(`https://admin.yeahtrips.in/editdetailstrips/${trip_id}`),
 
-          axios.get(`http://admin.yeahtrips.in/tripitenary/${trip_id}`),
+          axios.get(`https://admin.yeahtrips.in/tripitenary/${trip_id}`),
           axios.get(`https://admin.yeahtrips.in/getbookingdetails/${trip_id}`),
           axios.get(`https://admin.yeahtrips.in/cancellations/${trip_id}`),
           axios.get(`https://admin.yeahtrips.in/getcoordinatordetails/${trip_id}`),
