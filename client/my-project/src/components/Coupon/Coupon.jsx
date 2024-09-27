@@ -4,19 +4,22 @@ import axios from 'axios';
 
 const AddCouponForm = () => {
     const [couponCode, setCouponCode] = useState('');
+    const [couponAmount, setCouponAmount] = useState(''); // Coupon value (either percentage or fixed amount)
     const [isPercentage, setIsPercentage] = useState(false);
     const [isAmount, setIsAmount] = useState(false);
     const [minAmount, setMinAmount] = useState('');
     const [maxAmount, setMaxAmount] = useState('');
-    const [emails, setEmails] = useState('');  // Now a single string for comma-separated emails
+    const [emails, setEmails] = useState(''); // Now a single string for comma-separated emails
     const [expiryDate, setExpiryDate] = useState('');
     const [isActive, setIsActive] = useState(true);
 
     const handleCheckboxChange = (type) => {
         if (type === 'percentage') {
             setIsPercentage(!isPercentage);
+            setIsAmount(false); // Deselect amount checkbox when percentage is selected
         } else if (type === 'amount') {
             setIsAmount(!isAmount);
+            setIsPercentage(false); // Deselect percentage checkbox when amount is selected
         }
     };
 
@@ -26,19 +29,24 @@ const AddCouponForm = () => {
     const handleActivationChange = () => setIsActive(!isActive);
 
     const handleEmailChange = (e) => {
-        setEmails(e.target.value);  // Store emails as a comma-separated string
+        setEmails(e.target.value); // Store emails as a comma-separated string
     };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
 
         if (!isPercentage && !isAmount) {
-            alert('Please select at least one discount type.');
+            alert('Please select either percentage or fixed amount for the discount.');
             return;
         }
 
         if (minAmount === '' || maxAmount === '') {
-            alert('Please enter both minimum and maximum amounts.');
+            alert('Please enter both minimum and maximum order amounts.');
+            return;
+        }
+
+        if (couponAmount === '') {
+            alert('Please enter the coupon discount value.');
             return;
         }
 
@@ -56,6 +64,7 @@ const AddCouponForm = () => {
 
         const couponData = {
             couponCode,
+            discountValue: couponAmount, // Add coupon value
             discountTypes: {
                 percentage: isPercentage,
                 amount: isAmount,
@@ -74,6 +83,8 @@ const AddCouponForm = () => {
             console.log('Coupon Created:', response.data);
 
             alert('Coupon created successfully!');
+            window.location.reload()
+
         } catch (error) {
             console.error('Error creating coupon:', error);
             alert('An error occurred while creating the coupon. Please try again.');
@@ -120,40 +131,57 @@ const AddCouponForm = () => {
                                 checked={isAmount}
                                 onChange={() => handleCheckboxChange('amount')}
                             />
-                            <span className="ml-2 text-gray-700">Amount</span>
+                            <span className="ml-2 text-gray-700">Fixed Amount</span>
                         </label>
                     </fieldset>
+
+                    <div className="mb-6">
+                        <label htmlFor="couponAmount" className="block text-sm font-medium text-gray-700 mb-2">
+                            Discount Value:
+                        </label>
+                        <input
+                            type="number"
+                            id="couponAmount"
+                            value={couponAmount}
+                            onChange={(e) => setCouponAmount(e.target.value)}
+                            className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 transition duration-200"
+                            placeholder="Enter discount amount or percentage"
+                        />
+                    </div>
+
+
 
                     <div className="grid grid-cols-2 gap-4 mb-6">
                         <div>
                             <label htmlFor="minAmount" className="block text-sm font-medium text-gray-700 mb-2">
-                                Minimum Amount:
+                                Minimum Order Amount:
                             </label>
                             <input
                                 type="number"
                                 id="minAmount"
                                 value={minAmount}
                                 onChange={handleMinAmountChange}
+                                onWheel={(e) => e.target.blur()}
                                 className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 transition duration-200"
                                 placeholder="Min amount"
                             />
                         </div>
                         <div>
                             <label htmlFor="maxAmount" className="block text-sm font-medium text-gray-700 mb-2">
-                                Maximum Amount:
+                                Maximum Order Amount:
                             </label>
                             <input
                                 type="number"
                                 id="maxAmount"
                                 value={maxAmount}
                                 onChange={handleMaxAmountChange}
+                                onWheel={(e) => e.target.blur()}
                                 className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 transition duration-200"
                                 placeholder="Max amount"
                             />
                         </div>
                     </div>
 
-                    {/* Expiry Date */}
                     <div className="mb-6">
                         <label htmlFor="expiryDate" className="block text-sm font-medium text-gray-700 mb-2">
                             Expiry Date:
@@ -167,7 +195,6 @@ const AddCouponForm = () => {
                         />
                     </div>
 
-                    {/* Activation Status */}
                     <div className="mb-6">
                         <label className="block text-sm font-medium text-gray-700 mb-2">Activation Status:</label>
                         <label className="inline-flex items-center">
@@ -181,7 +208,6 @@ const AddCouponForm = () => {
                         </label>
                     </div>
 
-                    {/* Email Field for Comma-Separated Values */}
                     <div className="mb-6">
                         <label htmlFor="emails" className="block text-sm font-medium text-gray-700 mb-2">
                             User Gmail(s) (comma separated):
@@ -197,7 +223,7 @@ const AddCouponForm = () => {
 
                     <button
                         type="submit"
-                        className="w-full py-3 px-4 bg-green-600 text-white font-semibold rounded-md hover:bg-green-700 focus:outline-none transition duration-200"
+                        className="w-full bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700 transition duration-200"
                     >
                         Create Coupon
                     </button>

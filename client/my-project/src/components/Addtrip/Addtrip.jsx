@@ -153,6 +153,7 @@ function Addtripdetails() {
                 },
             });
             alert('Trip details submitted successfully!');
+            window.location.reload()
         } catch (error) {
             console.error('Error submitting trip details:', error);
             alert('Failed to submit trip details.');
@@ -825,6 +826,8 @@ function Addtripdetails() {
                                 />
                                 <label htmlFor={`policy-${policy.id}`} className="cursor-pointer text-gray-700">
                                     <span className="font-medium">{policy.feeType}</span> (Policy ID: {policy.id})
+                                    <div className="font-medium">{policy.policyName}</div> 
+
                                     {policy.dateRanges.length > 0 && (
                                         <ul className="ml-4 mt-1 text-sm text-gray-600">
                                             {policy.dateRanges.map((range, index) => (

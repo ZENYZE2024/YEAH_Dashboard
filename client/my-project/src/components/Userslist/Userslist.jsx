@@ -29,7 +29,10 @@ function Userslist() {
     const handleAddUserClick = () => {
         navigate('/adduser');
     };
-
+    const handleEditUserClick = (userId) => {
+        navigate(`/edituser/${userId}`);
+    };
+    
     // const deleteUser = async (userId) => {
     //     try {
     //         await axios.delete(`http://localhost:3000/deleteuser/${userId}`);
@@ -72,13 +75,20 @@ function Userslist() {
                                         <td className="py-3 px-6">{user.email}</td>
                                         <td className="py-3 px-6">{user.role}</td>
                                         <td className="py-3 px-6">
-                                            <button
-                                                // onClick={() => deleteUser(user.id)} 
-                                                className="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition duration-300"
-                                            >
-                                                Delete
-                                            </button>
-                                        </td>
+    <button
+        onClick={() => handleEditUserClick(user.id)}
+        className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition duration-300 mr-2"
+    >
+        Edit
+    </button>
+    <button
+        // onClick={() => deleteUser(user.id)} 
+        className="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition duration-300"
+    >
+        Delete
+    </button>
+</td>
+
                                     </tr>
                                 ))}
                             </tbody>

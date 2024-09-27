@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import { FaTimes } from 'react-icons/fa';  // Import FontAwesome close icon
 
 const Menu = ({ showSidebar, setShowSidebar }) => {
     const navigate = useNavigate();
@@ -97,6 +98,13 @@ const Menu = ({ showSidebar, setShowSidebar }) => {
         <>
             {showSidebar && (
                 <div className="w-64 bg-white shadow-lg h-full fixed left-0 top-0 p-6 z-10">
+                    {/* Close icon */}
+                    <div className="flex justify-end mb-4">
+                        <button onClick={() => setShowSidebar(false)} className="text-gray-600 hover:text-gray-900 transition-colors">
+                            <FaTimes size={24} /> {/* FontAwesome close icon */}
+                        </button>
+                    </div>
+                    
                     <ul className="space-y-4">
                         <li>
                             <button onClick={handleUserManagementClick} className="w-full text-left py-3 border-2 border-teal-600 rounded-lg text-teal-600 font-semibold shadow-md hover:shadow-lg transition-all duration-300">

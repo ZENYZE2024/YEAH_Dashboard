@@ -175,6 +175,68 @@ app.post('/adduser', upload.single('image'), async (req, res) => {
     }
 });
 
+app.put('/updateuser/:userId', upload.single('profile_image'), async (req, res) => {
+    const { userId } = req.params;
+    const { email, password, role, name, link, profile_mode } = req.body;
+
+    // Check if a new image was uploaded
+    const profileImage = req.file ? `\\uploads\\${req.file.filename}` : null; // Adjust path based on your setup
+
+    try {
+        const connection = await pool.getConnection();
+
+        // Check if the user exists
+        const [existingUser] = await connection.execute(
+            'SELECT * FROM tripusers WHERE id = ?',
+            [userId]
+        );
+
+        if (existingUser.length === 0) {
+            await connection.release();
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        // If a new password is provided, hash it
+        let hashedPassword;
+        if (password) {
+            const saltRounds = 10;
+            hashedPassword = await bcrypt.hash(password, saltRounds);
+        }
+
+        // Prepare the update query
+        const updateQuery = `
+            UPDATE tripusers
+            SET 
+                email = COALESCE(?, email),
+                password = COALESCE(?, password),
+                role = COALESCE(?, role),
+                profile_image = COALESCE(?, profile_image),
+                name = COALESCE(?, name),
+                link = COALESCE(?, link),
+                profile_mode = COALESCE(?, profile_mode)
+            WHERE id = ?
+        `;
+
+        const updateParams = [
+            email,
+            hashedPassword,
+            role,
+            profileImage,
+            name,
+            link,
+            profile_mode,
+            userId
+        ];
+
+        await connection.execute(updateQuery, updateParams);
+        await connection.release();
+
+        res.status(200).json({ message: 'User details updated successfully' });
+    } catch (error) {
+        console.error('Error updating user:', error);
+        res.status(500).json({ message: 'Error updating user details' });
+    }
+});
 
 app.post('/userlogin', async (req, res) => {
     const { email, password } = req.body;
@@ -314,7 +376,8 @@ app.get('/tripitenary/:trip_id', async (req, res) => {
 
 app.get('/cancellationpolicies/:trip_id', async (req, res) => {
     const trip_id = req.params.trip_id;
-
+    console.log(trip_id);
+    
     if (!trip_id) {
         return res.status(400).json({ error: 'trip_id is required' });
     }
@@ -322,18 +385,32 @@ app.get('/cancellationpolicies/:trip_id', async (req, res) => {
     let connection;
     try {
         connection = await pool.getConnection();
-        const [rows] = await connection.query(
-            `SELECT * 
+
+        // Step 1: Get policy_ids for the given trip_id
+        const [cancellationPolicies] = await connection.query(
+            `SELECT policy_id 
              FROM cancellationpolicies
              WHERE trip_id = ?`,
             [trip_id]
         );
 
-        if (rows.length === 0) {
-            return res.status(404).json({ error: 'Cancellation policies not found' });
+        if (cancellationPolicies.length === 0) {
+            return res.status(404).json({ error: 'Cancellation policies not found for the given trip_id' });
         }
 
-        res.json(rows);
+        // Step 2: Extract policy_ids
+        const policyIds = cancellationPolicies.map(policy => policy.policy_id);
+
+        // Step 3: Get details from cancellationpolicy and policy_date_range tables
+        const [policyDetails] = await connection.query(
+            `SELECT p.policy_id, p.fee_type, d.start_date, d.end_date, d.fee, d.policy_name 
+             FROM cancellationpolicy p
+             JOIN policy_date_ranges d ON p.policy_id = d.policy_id
+             WHERE p.policy_id IN (?)`,
+            [policyIds]
+        );
+
+        res.json(policyDetails);
     } catch (error) {
         console.error('Error fetching cancellation policies:', error);
         res.status(500).json({ error: 'An internal server error occurred' });
@@ -341,6 +418,8 @@ app.get('/cancellationpolicies/:trip_id', async (req, res) => {
         if (connection) connection.release();
     }
 });
+
+
 app.put('/updatetrip', upload.single('trip_image'), async (req, res) => {
     const tripDetails = req.body;
     const trip_id = tripDetails.trip_id;
@@ -672,46 +751,45 @@ app.post('/addtrips', upload.any(), async (req, res) => {
             // Process and insert cancellation policies
             // Process and insert cancellation policies
             let processedPolicies = [];
-cancellationPolicies.forEach(policy => {
-    if (typeof policy === 'string' && policy.trim() !== 'undefined') {
-        try {
-            const parsedPolicies = JSON.parse(policy);
-            if (Array.isArray(parsedPolicies)) {
-                processedPolicies = processedPolicies.concat(parsedPolicies);
+            cancellationPolicies.forEach(policy => {
+                if (typeof policy === 'string' && policy.trim() !== 'undefined') {
+                    try {
+                        const parsedPolicies = JSON.parse(policy);
+                        if (Array.isArray(parsedPolicies)) {
+                            processedPolicies = processedPolicies.concat(parsedPolicies);
+                        }
+                    } catch (err) {
+                        console.error('Error parsing cancellation policy:', policy, err);
+                    }
+                }
+            });
+            
+            console.log('Processed Cancellation Policies:', JSON.stringify(processedPolicies, null, 2));
+            
+            // Update the SQL query to only include policy_id and trip_id
+            const insertCancellationPolicySQL = `INSERT INTO cancellationpolicies (
+                policy_id, trip_id
+            ) VALUES (?, ?)`;
+            
+            for (const policy of processedPolicies) {
+                // Here you may want to extract policy_id from the policy object
+                const policyId = policy.id; // Assuming policy_id exists in your policy object
+            
+                // Assuming trip_id is defined elsewhere in your code
+                const tripId = trip_id; // Ensure trip_id is accessible
+            
+                // Prepare the values for insertion
+                const cancellationPolicyValues = [
+                    policyId,  // The policy_id from the policy object
+                    tripId     // The trip_id
+                ];
+            
+                // Insert the record into the database
+                await connection.query(insertCancellationPolicySQL, cancellationPolicyValues);
             }
-        } catch (err) {
-            console.error('Error parsing cancellation policy:', policy, err);
-        }
-    }
-});
-
-console.log('Processed Cancellation Policies:', JSON.stringify(processedPolicies, null, 2));
-
-const insertCancellationPolicySQL = `INSERT INTO cancellationpolicies (
-    policy_startdate, policy_endDate, fee, trip_id, cancellationType
-) VALUES (?, ?, ?, ?, ?)`;
-
-for (const policy of processedPolicies) {
-    for (const dateRange of policy.dateRanges) {
-        const startDate = dateRange.startDate || null; // Keep null if it's empty
-        const endDate = (dateRange.endDate !== undefined && dateRange.endDate !== null) ? dateRange.endDate : null;
-        const fee = dateRange.fee || null;
-
-        // Proceed with inserting even if startDate is null
-        const cancellationPolicyValues = [
-            startDate,       // Null or valid date
-            endDate,         // Null or valid date
-            fee,             // Null or valid fee
-            trip_id,         // Assuming trip_id is defined elsewhere
-            policy.feeType || null // Null or feeType value
-        ];
-
-        // Insert the record into the database
-        await connection.query(insertCancellationPolicySQL, cancellationPolicyValues);
-    }
-}
-
-console.log('Inserted cancellation policies');
+            
+            console.log('Inserted cancellation policies');
+            
 
             await connection.commit();
             res.json({ message: 'Trip, images, itinerary data, and policies inserted successfully!' });
@@ -851,7 +929,7 @@ app.get('/getbookingdetails/:trip_id', async (req, res) => {
         // Check if there are no booking IDs, but don't throw an error
         if (bookingIds.length === 0) {
             connection.release();
-            return res.json([]);  
+            return res.json([]);
         }
 
         const [bookingsRows] = await connection.query(`
@@ -1187,9 +1265,10 @@ app.delete('/carousalsdelete/:id', async (req, res) => {
 });
 app.put('/update-coordinator/:trip_id/:coordinator_id', upload.single('image'), async (req, res) => {
     const trip_id = req.params.trip_id;
-    const cordinator_id = req.params.coordinator_id;
-    const { name, role, email, link, profile_mode } = req.body;
-    const image = req.file ? `\\uploads\\${req.file.filename}` : null;
+    const coordinator_id = req.params.coordinator_id;
+    const { name, role, email, link, profile_mode, existingImage } = req.body;
+    console.log(req.body)
+    const image = req.file ? `\\uploads\\${req.file.filename}` : existingImage; // If no new image, use existing image
     console.log("Image URL:", image);
 
     let connection;
@@ -1202,7 +1281,7 @@ app.put('/update-coordinator/:trip_id/:coordinator_id', upload.single('image'), 
             SET name = ?, role = ?, email = ?, link = ?, profile_mode = ?, image = ? 
             WHERE trip_id = ? AND cordinator_id = ?`;
 
-        const [result] = await connection.query(query, [name, role, email, link, profile_mode, image, trip_id, cordinator_id]);
+        const [result] = await connection.query(query, [name, role, email, link, profile_mode, image, trip_id, coordinator_id]);
 
         if (result.affectedRows > 0) {
             res.status(200).json({ message: 'Coordinator updated successfully' });
@@ -1218,32 +1297,39 @@ app.put('/update-coordinator/:trip_id/:coordinator_id', upload.single('image'), 
 });
 
 
+app.put('/update-cancellation-policy/:tripId', async (req, res) => {
+    const tripId = req.params.tripId; // This is the trip_id you want to update the policy_id for
+    const { policy_id } = req.body; // Only policy_id is received from the request body
 
-app.put('/update-cancellation-policy/:policyId', async (req, res) => {
-    const policyId = req.params.policyId;
-    const { trip_id, policy_startdate, policy_endDate, fee, cancellationType } = req.body;
-
-    console.log("body", req.body); // Debugging: Check the request body
+    console.log("body", req.body); 
 
     // Validate request body
-    if (!policyId || !trip_id || !policy_startdate || !policy_endDate || fee === undefined || !cancellationType) {
-        return res.status(400).json({ error: 'All fields are required' });
+    if (!policy_id || !tripId) {
+        return res.status(400).json({ error: 'Both policy_id and trip_id are required' });
     }
 
     let connection;
     try {
         connection = await pool.getConnection();
+        
+        // Check if the tripId exists before attempting to update
+        const [tripCheck] = await connection.query('SELECT * FROM cancellationpolicies WHERE trip_id = ?', [tripId]);
+        if (tripCheck.length === 0) {
+            return res.status(404).json({ error: 'Trip not found' });
+        }
+
+        // Update the policy_id for the specified trip_id
         const query = `
             UPDATE cancellationpolicies 
-            SET policy_startdate = ?, policy_endDate = ?, fee = ?, cancellationType = ?
-            WHERE id = ? AND trip_id = ?`;
+            SET policy_id = ? 
+            WHERE trip_id = ?`;
 
-        const [result] = await connection.query(query, [policy_startdate, policy_endDate, fee, cancellationType, policyId, trip_id]);
+        const [result] = await connection.query(query, [policy_id, tripId]); // Updating the policy_id
 
         if (result.affectedRows > 0) {
             res.status(200).json({ message: 'Cancellation policy updated successfully' });
         } else {
-            res.status(404).json({ message: 'Cancellation policy not found or trip_id does not match' });
+            res.status(500).json({ message: 'Failed to update policy' });
         }
     } catch (error) {
         console.error('Error updating cancellation policy:', error);
@@ -1253,59 +1339,7 @@ app.put('/update-cancellation-policy/:policyId', async (req, res) => {
     }
 });
 
-app.post('/whatsapp-links', async (req, res) => {
-    const { link } = req.body;
-    if (!link) {
-        return res.status(400).json({ error: 'Link is required' });
-    }
 
-    const connection = await pool.getConnection();
-    try {
-        const [result] = await connection.query('INSERT INTO communitywhatsapp (link) VALUES (?)', [link]);
-        res.status(201).json({ id: result.insertId, link });
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    } finally {
-        connection.release();
-    }
-});
-
-app.get('/getwhatsapp-links', async (req, res) => {
-    const connection = await pool.getConnection();
-    try {
-        const [rows] = await connection.query('SELECT * FROM communitywhatsapp');
-        res.status(200).json(rows);
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    } finally {
-        connection.release();
-    }
-});
-
-app.put('/updatewhatsapp-links/:id', async (req, res) => {
-    const { id } = req.params;
-    const { link } = req.body;
-    let connection;
-    try {
-        if (!id || !link) {
-            return res.status(400).send('Missing id or link');
-        }
-
-        connection = await pool.getConnection();
-        const [result] = await connection.query('UPDATE communitywhatsapp SET link = ? WHERE id = ?', [link, id]);
-
-        if (result.affectedRows === 0) {
-            return res.status(404).send('Link not found');
-        }
-
-        res.json({ id, link });
-    } catch (err) {
-        console.error('Error updating WhatsApp community link:', err);
-        res.status(500).send('Error updating WhatsApp community link');
-    } finally {
-        if (connection) connection.release(); // Always release the connection back to the pool
-    }
-});
 
 app.delete('/whatsapp-links/:id', async (req, res) => {
     const { id } = req.params;
@@ -1352,7 +1386,7 @@ app.post('/entercancellationpolicy', async (req, res) => {
         connection = await pool.getConnection();
 
         for (const policy of policies) {
-            const { feeType, dateRanges } = policy;
+            const { policyName, feeType, dateRanges } = policy;
 
             // Log the policy data
             console.log('Processing policy:', feeType, dateRanges);
@@ -1380,12 +1414,14 @@ app.post('/entercancellationpolicy', async (req, res) => {
                     policyId,
                     range.startDate === '' ? null : range.startDate, // Convert empty startDate to NULL
                     range.endDate,  // endDate cannot be NULL or empty
-                    range.fee
+                    range.fee,
+                    policyName  // Include policyName in the values
                 ];
             });
 
+            // Update the insert query to include the policy_name column
             await connection.query(
-                'INSERT INTO policy_date_ranges (policy_id, start_date, end_date, fee) VALUES ?',
+                'INSERT INTO policy_date_ranges (policy_id, start_date, end_date, fee, policy_name) VALUES ?',
                 [dateRangeValues]
             );
         }
@@ -1405,6 +1441,73 @@ app.post('/entercancellationpolicy', async (req, res) => {
     }
 });
 
+app.put('/updatecancellationpolicy/:id', async (req, res) => {
+    const policyId = req.params.id; // Extract policy ID from the URL
+    const { policyName, feeType, dateRanges } = req.body; // Extract data from the request body
+
+    // Log the received data
+    console.log('Updating policy:', { policyId, policyName, feeType, dateRanges });
+
+    // Check if the input is valid
+    if (!feeType || !Array.isArray(dateRanges)) {
+        return res.status(400).json({ error: 'Invalid policy data' });
+    }
+
+    let connection;
+    try {
+        connection = await pool.getConnection();
+
+        // Update the policy's fee type
+        const [updatePolicyResult] = await connection.query(
+            'UPDATE cancellationpolicy SET fee_type = ? WHERE policy_id = ?', // Use 'id' if that's the column name
+            [feeType, policyId]
+        );
+
+        // Check if the policy was updated
+        if (updatePolicyResult.affectedRows === 0) {
+            return res.status(404).json({ error: 'Policy not found' });
+        }
+
+        // Delete existing date ranges for the policy
+        await connection.query('DELETE FROM policy_date_ranges WHERE policy_id = ?', [policyId]);
+
+        // Insert new date ranges
+        const dateRangeValues = dateRanges.map(range => {
+            // Ensure endDate is defined (can be 0, but not undefined or null)
+            if (range.endDate === undefined || range.endDate === null || (typeof range.endDate === 'string' && range.endDate.trim() === '')) {
+                throw new Error('endDate cannot be empty or undefined');
+            }
+
+            return [
+                policyId,  // Use the correct policy ID
+                range.startDate === '' ? null : range.startDate, // Convert empty startDate to NULL
+                range.endDate,  // Allow endDate to be 0
+                range.fee,
+                policyName  // Include policyName in the values
+            ];
+        });
+
+        await connection.query(
+            'INSERT INTO policy_date_ranges (policy_id, start_date, end_date, fee, policy_name) VALUES ?',
+            [dateRangeValues]
+        );
+
+        res.status(200).json({ message: 'Cancellation policy updated successfully' });
+    } catch (error) {
+        console.error('Error updating cancellation policy:', error);
+
+        // Handle custom error for empty endDate
+        if (error.message.includes('endDate cannot be empty')) {
+            return res.status(400).json({ error: 'endDate is required and cannot be empty or undefined.' });
+        }
+
+        res.status(500).json({ error: 'An error occurred while updating the policy' });
+    } finally {
+        if (connection) connection.release();
+    }
+});
+
+
 app.get('/getCancellationPolicies', async (req, res) => {
     let connection;
 
@@ -1413,42 +1516,43 @@ app.get('/getCancellationPolicies', async (req, res) => {
         connection = await pool.getConnection();
 
         const [rows] = await connection.query(`
-            SELECT cp.policy_id, cp.fee_type, dr.start_date, dr.end_date, dr.fee
+            SELECT cp.policy_id, cp.fee_type, dr.policy_name, dr.start_date, dr.end_date, dr.fee
             FROM cancellationpolicy AS cp
             LEFT JOIN policy_date_ranges AS dr ON cp.policy_id = dr.policy_id
         `);
+        console.log(rows)
 
-        // Grouping by policy_id to handle multiple date ranges for a single policy
         const policies = {};
         rows.forEach(row => {
             if (!policies[row.policy_id]) {
                 policies[row.policy_id] = {
                     id: row.policy_id,
                     feeType: row.fee_type,
+                    policyName: row.policy_name, // Include policy_name from cancellationpolicies
                     dateRanges: [],
                 };
             }
 
-            // Always include the start_date and end_date even if they are null
+            // Push date ranges into the corresponding policy
             policies[row.policy_id].dateRanges.push({
-                startDate: row.start_date, // This will include NULL values
-                endDate: row.end_date,     // This will include NULL values
+                startDate: row.start_date,
+                endDate: row.end_date,
                 fee: row.fee,
             });
         });
 
-        // Convert policies object to an array
         const result = Object.values(policies);
 
         res.json(result);
+        console.log(result)
     } catch (error) {
         console.error('Error fetching cancellation policies:', error);
         res.status(500).json({ error: 'Internal Server Error' });
     } finally {
-        // Release the connection back to the pool
         if (connection) connection.release();
     }
 });
+
 
 
 app.delete('/deletecancellationpolicy/:id', async (req, res) => {
@@ -1486,11 +1590,12 @@ app.delete('/deletecancellationpolicy/:id', async (req, res) => {
 });
 
 app.post('/discountcoupons', async (req, res) => {
-    const { couponCode, discountTypes, range, expiryDate, isActive, emails } = req.body;
-    
+    const { couponCode, discountValue, discountTypes, range, expiryDate, isActive, emails } = req.body;
+
     console.log(req.body);
-    
-    if (!couponCode || !range.min || !range.max || !expiryDate) {
+
+    // Validate input
+    if (!couponCode || !discountValue || !range?.min || !range?.max || !expiryDate) {
         return res.status(400).send({ message: 'Invalid input' });
     }
 
@@ -1498,24 +1603,27 @@ app.post('/discountcoupons', async (req, res) => {
         const connection = await pool.getConnection();
 
         const discountType = discountTypes.percentage ? 'percentage' : 'amount';
-        const minAmount = range.min;
-        const maxAmount = range.max;
+        const minAmount = Number(range.min);  // Ensure these are numbers
+        const maxAmount = Number(range.max);
 
+        // Insert coupon into the database
         const query = `
-            INSERT INTO coupons (coupon_code, discount_type, min_amount, max_amount, expiry_date, is_active) 
-            VALUES (?, ?, ?, ?, ?, ?)
+            INSERT INTO coupons (coupon_code, discount_type, discount_value, min_amount, max_amount, expiry_date, is_active) 
+            VALUES (?, ?, ?, ?, ?, ?, ?)
         `;
         const [result] = await connection.query(query, [
             couponCode,
             discountType,
+            discountValue, // Use the correct property
             minAmount,
             maxAmount,
             expiryDate,
-            isActive,
+            isActive ? 1 : 0, // Convert boolean to TINYINT
         ]);
 
         const couponId = result.insertId;
 
+        // Insert associated emails into coupon_emails table
         if (emails && emails.length > 0) {
             const emailQuery = `INSERT INTO coupon_emails (coupon_id, email) VALUES ?`;
             const emailValues = emails.map((email) => [couponId, email]);
@@ -1532,19 +1640,21 @@ app.post('/discountcoupons', async (req, res) => {
     }
 });
 
+
+
 app.get('/getthecoupondetails', async (req, res) => {
     try {
         const connection = await pool.getConnection();
 
         // Query to get the coupon details
         const couponQuery = `
-            SELECT c.id AS coupon_id, c.coupon_code, c.discount_type, c.min_amount, c.max_amount, c.expiry_date, c.is_active,
+            SELECT c.id AS coupon_id, c.coupon_code, c.discount_type,c.discount_value, c.min_amount, c.max_amount, c.expiry_date, c.is_active,
             GROUP_CONCAT(ce.email) AS emails
             FROM coupons c
             LEFT JOIN coupon_emails ce ON c.id = ce.coupon_id
             GROUP BY c.id
         `;
-        
+
         const [coupons] = await connection.query(couponQuery);
 
         connection.release();
@@ -1553,8 +1663,8 @@ app.get('/getthecoupondetails', async (req, res) => {
             return res.status(404).send({ message: 'No coupons found' });
         }
 
-        // Send the coupon details as a response
         res.status(200).send({ coupons });
+        console.log(coupons)
     } catch (error) {
         console.error('Error fetching coupon details:', error);
         res.status(500).send({ message: 'Error fetching coupon details.' });
@@ -1563,12 +1673,12 @@ app.get('/getthecoupondetails', async (req, res) => {
 
 app.put('/discountcoupons/:coupon_id', async (req, res) => {
     const couponId = req.params.coupon_id; // Get the coupon ID from the request parameters
-    const { couponCode, discountTypes, range, expiryDate, isActive, emails } = req.body;
+    const { couponCode, discountValue, discountTypes, range, expiryDate, isActive, emails } = req.body;
 
     console.log(req.body); // Log incoming request body
 
     // Validate input
-    if (!couponCode || !range.min || !range.max || !expiryDate) {
+    if (!couponCode || !discountValue || !range.min || !range.max || !expiryDate) {
         return res.status(400).send({ message: 'Invalid input' });
     }
 
@@ -1583,14 +1693,15 @@ app.put('/discountcoupons/:coupon_id', async (req, res) => {
         const minAmount = range.min;
         const maxAmount = range.max;
 
-        // Update coupon details
+        // Update coupon details with discount value included
         const query = `
             UPDATE coupons 
-            SET coupon_code = ?, discount_type = ?, min_amount = ?, max_amount = ?, expiry_date = ?, is_active = ? 
+            SET coupon_code = ?, discount_value = ?, discount_type = ?, min_amount = ?, max_amount = ?, expiry_date = ?, is_active = ? 
             WHERE id = ?
         `;
         await connection.query(query, [
             couponCode,
+            discountValue, // Include discount_value in the query
             discountType,
             minAmount,
             maxAmount,
@@ -1618,6 +1729,133 @@ app.put('/discountcoupons/:coupon_id', async (req, res) => {
     }
 });
 
+
+app.get('/gettheeditpickuppoints', async (req, res) => {
+    // Extract trip_id from query parameters
+    const { trip_id } = req.query;
+
+    if (!trip_id) {
+        return res.status(400).json({ error: 'trip_id is required' });
+    }
+
+    try {
+        const connection = await pool.getConnection();
+
+        const [rows] = await connection.query('SELECT * FROM pickuppoints WHERE trip_id = ?', [trip_id]);
+
+        connection.release();
+
+        res.json(rows);
+    } catch (err) {
+        console.error('Error fetching pickup points:', err);
+        res.status(500).json({ error: 'An error occurred while fetching pickup points' });
+    }
+});
+
+
+app.put('/updatethePickupPoints', async (req, res) => {
+    const { trip_id, pickupPoints } = req.body;
+  
+    console.log(req.body)
+    if (!trip_id || !Array.isArray(pickupPoints)) {
+      return res.status(400).json({ error: 'Invalid input' });
+    }
+  
+    const connection = await pool.getConnection();
+    try {
+      await connection.beginTransaction();
+  
+      const updatePromises = pickupPoints.map(async (point) => {
+        const { id, pickuppoint, time } = point;
+        const sql = `
+          UPDATE pickuppoints 
+          SET pickuppoint = ?, time = ?
+          WHERE id = ? AND trip_id = ?
+        `;
+        const [result] = await connection.execute(sql, [pickuppoint, time, id, trip_id]);
+        return result;
+      });
+  
+      await Promise.all(updatePromises);
+  
+      await connection.commit();
+      res.status(200).json({ message: 'Pickup points updated successfully!' });
+    } catch (error) {
+      console.error('Error updating pickup points:', error);
+      await connection.rollback();
+      res.status(500).json({ error: 'Failed to update pickup points' });
+    } finally {
+      connection.release();
+    }
+  })
+
+  app.get('/getuser/:id', async (req, res) => {
+    const userId = req.params.id; // Get the user ID from the request parameters
+
+    try {
+        const connection = await pool.getConnection(); // Get a connection from the pool
+        const [results] = await connection.query('SELECT * FROM tripusers WHERE id = ?', [userId]);
+
+        connection.release(); // Release the connection back to the pool
+
+        if (results.length === 0) {
+            return res.status(404).json({ error: 'User not found' }); // User not found response
+        }
+
+        res.json(results[0]); // Return the specific user object
+    } catch (error) {
+        console.error('Error fetching user:', error);
+        return res.status(500).json({ error: 'Internal server error' }); // Handle errors
+    }
+});
+
+app.get('/getcancellationpolicy/:policyId', async (req, res) => {
+    let connection;
+
+    try {
+        // Get the policyId from the request parameters
+        const policyId = req.params.policyId;
+
+        // Get a connection from the pool
+        connection = await pool.getConnection();
+
+        // Query to fetch the specific cancellation policy based on policyId
+        const [rows] = await connection.query(`
+            SELECT cp.policy_id, cp.fee_type, dr.policy_name, dr.start_date, dr.end_date, dr.fee
+            FROM cancellationpolicy AS cp
+            LEFT JOIN policy_date_ranges AS dr ON cp.policy_id = dr.policy_id
+            WHERE cp.policy_id = ?
+        `, [policyId]);
+
+        // Check if any rows are returned
+        if (rows.length === 0) {
+            return res.status(404).json({ error: 'Policy not found' });
+        }
+
+        const policy = {
+            id: rows[0].policy_id,
+            feeType: rows[0].fee_type,
+            policyName: rows[0].policy_name, // Include policy_name from cancellationpolicy
+            dateRanges: [],
+        };
+
+        // Push date ranges into the corresponding policy
+        rows.forEach(row => {
+            policy.dateRanges.push({
+                startDate: row.start_date,
+                endDate: row.end_date,
+                fee: row.fee,
+            });
+        });
+
+        res.json(policy);
+    } catch (error) {
+        console.error('Error fetching cancellation policy:', error);
+        res.status(500).json({ error: 'Internal Server Error' });
+    } finally {
+        if (connection) connection.release();
+    }
+});
 
 
 

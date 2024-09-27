@@ -20,6 +20,8 @@ import UserpasttripsDashboard from "./components/Usercomponent/Userpasttrips/Use
 import Readonlypastrips from "./components/readonlylogin/Readonlypasttrip";
 import CouponForm from "./components/Coupon/Couponedit";
 import AddCouponForm from "./components/Coupon/Coupon";
+import EditUser from "./components/Userslist/Edituser";
+import EditPolicies from "./components/Cancellationpolicy/Editcancellationpolicies";
 function App(){
        return(
         <>
@@ -44,6 +46,8 @@ function App(){
                             <Route path="/readonlypasttrips" exact element={<Readonlypastrips/>}/>
                             <Route path="discountcoupon" exact element={<CouponForm/>}/>
                             <Route path="add-coupon" exact element={<AddCouponForm/>}/>
+                            <Route path="/edituser/:userId" exact element={<EditUser />} />
+                            <Route path="/editpolicies/:policyId" exact element={<EditPolicies/>} />
                      </Routes>
               </div>
         </Router>

@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import AdminNavbar from '../Dashboardnavbar/Dashboardnavbar';
+import { Link } from 'react-router-dom';
 
 const Cancellationpolicy = () => {
     const [policies, setPolicies] = useState([
         {
+            policyName: '',  // Add policyName field
             feeType: 'percentage',
             dateRanges: [{ startDate: '', endDate: '', fee: '' }]
         }
@@ -27,7 +29,7 @@ const Cancellationpolicy = () => {
         fetchPolicies();
     }, []);
 
-    // Handle changes for fee type, startDate, endDate, and fee
+    // Handle changes for fee type, policyName, startDate, endDate, and fee
     const handlePolicyChange = (index, field, value) => {
         const updatedPolicies = [...policies];
         updatedPolicies[index][field] = value;
@@ -59,7 +61,7 @@ const Cancellationpolicy = () => {
 
     // Add a new policy
     const handleAddPolicy = () => {
-        setPolicies([...policies, { feeType: 'percentage', dateRanges: [{ startDate: '', endDate: '', fee: '' }] }]);
+        setPolicies([...policies, { policyName: '', feeType: 'percentage', dateRanges: [{ startDate: '', endDate: '', fee: '' }] }]);
     };
 
     // Remove a policy
@@ -71,15 +73,16 @@ const Cancellationpolicy = () => {
     const handleSubmit = async (e) => {
         e.preventDefault();
 
-        // Validate that all fields except the first startDate are filled
+        // Validate that all fields except the first startDate are filled and policyName is provided
         const isValid = policies.every((policy, policyIndex) =>
+            policy.policyName &&
             policy.dateRanges.every((range, rangeIndex) =>
                 (policyIndex === 0 && rangeIndex === 0 ? true : range.startDate && range.endDate && range.fee)
             )
         );
 
         if (!isValid) {
-            alert('Please fill in all fields for each policy except for the start date of the first range.');
+            alert('Please fill in all fields for each policy and ensure each policy has a unique name.');
             return;
         }
 
@@ -88,6 +91,8 @@ const Cancellationpolicy = () => {
             const response = await axios.post('https://admin.yeahtrips.in/entercancellationpolicy', { policies });
             console.log(response.data);
             alert('Cancellation policies successfully submitted');
+            window.location.reload();
+
         } catch (error) {
             console.error('Error submitting cancellation policies:', error);
             alert('Failed to submit policies');
@@ -100,6 +105,8 @@ const Cancellationpolicy = () => {
             await axios.delete(`https://admin.yeahtrips.in/deletecancellationpolicy/${policyId}`);
             setExistingPolicies(existingPolicies.filter(policy => policy.id !== policyId));
             alert('Policy deleted successfully');
+            window.location.reload()
+
         } catch (error) {
             console.error('Error deleting policy:', error);
             alert('Failed to delete policy');
@@ -119,6 +126,7 @@ const Cancellationpolicy = () => {
                     <table className=" w-full bg-white rounded-lg overflow-hidden shadow-md border-collapse">
                         <thead>
                             <tr className="bg-blue-500 text-white">
+                                <th className="py-4 px-6 text-left">Policy Name</th>
                                 <th className="py-4 px-6 text-left">Fee Type</th>
                                 <th className="py-4 px-6 text-left">Start Date</th>
                                 <th className="py-4 px-6 text-left">End Date</th>
@@ -132,16 +140,28 @@ const Cancellationpolicy = () => {
                                     {policy.dateRanges.map((range, rangeIndex) => (
                                         <tr key={rangeIndex} className="border-b">
                                             {rangeIndex === 0 && (
-                                                <td rowSpan={policy.dateRanges.length} className="py-4 px-6">
-                                                    <select
-                                                        value={policy.feeType}
-                                                        onChange={(e) => handlePolicyChange(policyIndex, 'feeType', e.target.value)}
-                                                        className="px-4 py-2 border rounded-lg bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                                    >
-                                                        <option value="percentage">Percentage</option>
-                                                        <option value="amount">Amount</option>
-                                                    </select>
-                                                </td>
+                                                <>
+                                                    <td rowSpan={policy.dateRanges.length} className="py-4 px-6">
+                                                        <input
+                                                            type="text"
+                                                            value={policy.policyName}
+                                                            onChange={(e) => handlePolicyChange(policyIndex, 'policyName', e.target.value)}
+                                                            placeholder="Enter Policy Name"
+                                                            className="custom-width px-4 py-2 border rounded-lg bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                        />
+                                                    </td>
+
+                                                    <td rowSpan={policy.dateRanges.length} className="py-4 px-6">
+                                                        <select
+                                                            value={policy.feeType}
+                                                            onChange={(e) => handlePolicyChange(policyIndex, 'feeType', e.target.value)}
+                                                            className="px-4 py-2 border rounded-lg bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                        >
+                                                            <option value="percentage">Percentage</option>
+                                                            <option value="amount">Amount</option>
+                                                        </select>
+                                                    </td>
+                                                </>
                                             )}
                                             <td className="py-4 px-6">
                                                 <input
@@ -182,13 +202,13 @@ const Cancellationpolicy = () => {
                                         </tr>
                                     ))}
                                     <tr>
-                                        <td colSpan={5} className="py-4 text-right">
+                                        <td colSpan={6} className="py-4 text-right">
                                             <button
                                                 type="button"
                                                 onClick={() => handleAddDateRange(policyIndex)}
                                                 className={`font-semibold ${policy.dateRanges[policy.dateRanges.length - 1].endDate === '0'
                                                     ? 'text-gray-500 cursor-not-allowed'
-                                                    : 'text-green-500 hover:text-green-700'
+                                                    : 'text-blue-500 hover:text-blue-700'
                                                     }`}
                                                 disabled={policy.dateRanges[policy.dateRanges.length - 1].endDate === '0'}
                                             >
@@ -196,88 +216,83 @@ const Cancellationpolicy = () => {
                                             </button>
                                         </td>
                                     </tr>
-
                                 </React.Fragment>
                             ))}
-                            <tr>
-                                <td colSpan={5} className="py-4 text-right">
-                                    <button
-                                        type="button"
-                                        onClick={handleAddPolicy}
-                                        className="text-blue-500 hover:text-blue-700 font-semibold"
-                                    >
-                                        + Add Another Policy
-                                    </button>
-                                </td>
-                            </tr>
                         </tbody>
                     </table>
 
-                    <div className="mt-8">
+                    <div className="mt-8 flex justify-between items-center">
+                        <button
+                            type="button"
+                            onClick={handleAddPolicy}
+                            className="px-4 py-2 bg-green-500 text-white rounded-lg shadow hover:bg-green-600"
+                        >
+                            + Add Policy
+                        </button>
                         <button
                             type="submit"
-                            className="w-full bg-blue-600 text-white py-3 rounded-lg shadow-lg hover:bg-blue-500 transition duration-300"
+                            className="px-4 py-2 bg-blue-500 text-white rounded-lg shadow hover:bg-blue-600"
                         >
-                            Submit Policies
+                            Submit
                         </button>
                     </div>
                 </form>
 
-                <div className="mt-10 ">
-                    <h3 className="text-3xl font-bold text-gray-900 mb-6 border-b-2 border-gray-300 pb-4">
-                        Existing Cancellation Policies
-                    </h3>
-                    {existingPolicies.length === 0 ? (
-                        <p className="text-gray-500 mt-6">No existing policies found.</p>
-                    ) : (
-                        <table className="bg-white rounded-lg overflow-hidden shadow-md border-collapse w-full">
-                            <thead>
-                                <tr className="bg-blue-500 text-white">
-                                    <th className="py-4 px-6">Policy ID</th>
-                                    <th className="py-4 px-6">Fee Type</th>
-                                    <th className="py-4 px-6">Date Ranges</th>
-                                    <th className="py-4 px-6">Fees</th>
-                                    <th className="py-4 px-6"></th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {existingPolicies.map((policy) => (
-                                    <tr key={policy.id} className="border-b">
-                                        <td className="py-4 px-6">{policy.id}</td>
-                                        <td className="py-4 px-6">{policy.feeType}</td>
-                                        <td className="py-4 px-6">
-                                            {policy.dateRanges.map((range, index) => (
-                                                <div key={index}>
-                                                    {range.startDate} - {range.endDate}
-                                                </div>
-                                            ))}
-                                        </td>
-                                        <td className="py-4 px-6">
-                                            {policy.dateRanges.map((range, index) => (
-                                                <div key={index}>
-                                                    {range.fee}
-                                                </div>
-                                            ))}
-                                        </td>
-                                        <td className="py-4 px-6 text-right">
-                                            <button
-                                                type="button"
-                                                onClick={() => handleDeletePolicy(policy.id)}
-                                                className="text-red-500 hover:text-red-700 font-semibold"
-                                            >
-                                                Delete
-                                            </button>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
+                <h2 className="text-4xl font-bold mb-8 mt-16 text-center text-gray-800">
+                    Existing Policies
+                </h2>
+                <table className="min-w-full bg-white rounded-lg overflow-hidden shadow-md border-collapse">
+                    <thead>
+                        <tr className="bg-blue-500 text-white">
+                            <th className="py-4 px-6 text-left">Policy Name</th>
+                            <th className="py-4 px-6 text-left">Start Date</th>
+                            <th className="py-4 px-6 text-left">End Date</th>
+                            <th className="py-4 px-6 text-left">Fee</th>
+                            <th className="py-4 px-6 text-left">Fee Type</th>
+                            <th className="py-4 px-6 text-left">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {existingPolicies.map((policy) => (
+                            policy.dateRanges.map((range, index) => (
+                                <tr key={`${policy.id}-${index}`} className="border-b">
+                                    {index === 0 && (
+                                        <>
+                                            <td rowSpan={policy.dateRanges.length} className="py-4 px-6">
+                                                {policy.policyName}
+                                            </td>
+                                        </>
+                                    )}
+                                    <td className="py-4 px-6">{range.startDate}</td>
+                                    <td className="py-4 px-6">{range.endDate}</td>
+                                    <td className="py-4 px-6">{range.fee}</td>
+                                    {index === 0 && (
+                        <>
+                            <td rowSpan={policy.dateRanges.length} className="py-4 px-6">{policy.feeType}</td>
+                            <td rowSpan={policy.dateRanges.length} className="py-4 px-6 flex space-x-2">
+                                <Link to={`/editpolicies/${policy.id}`}>
+                                    <button className="text-blue-500 hover:text-blue-700 font-semibold">
+                                        Edit
+                                    </button>
+                                </Link>
+                                <button
+                                    onClick={() => handleDeletePolicy(policy.id)}
+                                    className="text-red-500 hover:text-red-700 font-semibold"
+                                >
+                                    Delete
+                                </button>
+                            </td>
+                        </>
                     )}
-                </div>
+                                </tr>
+                            ))
+                        ))}
+                    </tbody>
+                </table>
+
 
             </div>
         </div>
-
     );
 };
 

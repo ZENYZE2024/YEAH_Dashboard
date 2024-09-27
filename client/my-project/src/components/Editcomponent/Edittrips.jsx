@@ -20,7 +20,6 @@ function Edittrips() {
   const [coordinators, setCoordinators] = useState([]);
   const [editedPolicy, setEditedPolicy] = useState(null);
   const [cancellationPolicies, setCancellationPolicies] = useState([]);
-
   useEffect(() => {
     const fetchData = async () => {
 
@@ -49,7 +48,7 @@ function Edittrips() {
         console.log("Trip Details:", detailsResponse.data);
         console.log("Trip Itinerary:", itineraryResponse.data);
         console.log("Bookings:", bookingsResponse.data);
-        console.log("cancellation", cancellations);
+        console.log("cancellation", cancellationPoliciesResponse.data);
         console.log("Coordinators:", coordinatorsResponse.data);
 
       } catch (error) {
@@ -66,61 +65,111 @@ function Edittrips() {
     };
   }, [trip_id]);
 
+  const [pickupPoints, setPickupPoints] = useState([]);
+  const [editedPoints, setEditedPoints] = useState([]);
+  const [isEditingPickupPoints, setIsEditingPickupPoints] = useState(false); // Renamed state variable
+
+  useEffect(() => {
+    const fetchPickupPoints = async () => {
+      try {
+        const response = await axios.get('https://admin.yeahtrips.in/gettheeditpickuppoints', {
+          params: { trip_id },
+        });
+        setPickupPoints(response.data);
+        setEditedPoints(response.data); // Initialize editedPoints with fetched data
+        setLoading(false);
+      } catch (err) {
+        setError('Failed to fetch pickup points');
+        setLoading(false);
+      }
+    };
+    if (trip_id) {
+      fetchPickupPoints();
+    }
+  }, [trip_id]);
+
+  const handleEditClick = () => {
+    setIsEditingPickupPoints(true); // Update here
+  };
+
+  const handleChange = (index, field, value) => {
+    const updatedPoints = [...editedPoints];
+    updatedPoints[index] = { ...updatedPoints[index], [field]: value };
+    setEditedPoints(updatedPoints);
+  };
+
+  const handleSavePickupPoints = async () => {
+    try {
+      await axios.put('https://admin.yeahtrips.in/updatethePickupPoints', {
+        trip_id,
+        pickupPoints: editedPoints,
+      });
+      console.log('Pickup points updated successfully!');
+      setPickupPoints(editedPoints); // Optionally update original pickupPoints state
+    } catch (error) {
+      console.error('Error updating pickup points:', error);
+    } finally {
+      setIsEditingPickupPoints(false); // Exit edit mode after saving
+    }
+  };
+
   const [isEditingcordinators, setIsEditingcordinators] = useState(false);
   const [editedCoordinator, setEditedCoordinator] = useState({});
 
   const handleEditcordinatorClick = (index) => {
-    setIsEditingcordinators(index);  // Set the index of the coordinator being edited
-    setEditedCoordinator(coordinators[index]);  // Initialize with current values
+    setIsEditingcordinators(index);
+    setEditedCoordinator(coordinators[index]); // Set existing coordinator details for editing
+    setSelectedImage(coordinators[index].image); // Set the current image in state
   };
 
   const handleInputcordinatorChange = (e) => {
     const { name, value } = e.target;
     setEditedCoordinator((prev) => ({
       ...prev,
-      [name]: value,
+      [name]: value
     }));
   };
+
+
+
   const handleSaveChanges = async (coordinatorId) => {
     setLoading(true); // Start loading
 
     try {
-      // Create a FormData object
       const formData = new FormData();
 
-      // Append other fields
+      // Append all other fields from editedCoordinator
       formData.append('name', editedCoordinator.name);
       formData.append('role', editedCoordinator.role);
       formData.append('email', editedCoordinator.email);
       formData.append('link', editedCoordinator.link);
       formData.append('profile_mode', editedCoordinator.profile_mode);
 
-      // Append the image file if available
-      if (selectedImage) { // Ensure selectedImage is the file object
-        formData.append('image', selectedImage);
+      // Check if a new image is selected; otherwise, append the existing image URL
+      if (selectedImage && typeof selectedImage !== 'string') {
+        formData.append('image', selectedImage); // New image file
+      } else {
+        formData.append('existingImage', editedCoordinator.image); // Send existing image URL
       }
 
-      // Debugging: Check the FormData contents (optional)
-      for (const [key, value] of formData.entries()) {
+      // Log the formData to verify the contents
+      for (let [key, value] of formData.entries()) {
         console.log(`${key}: ${value}`);
       }
 
-      // Sending the PUT request to update the coordinator
-      const response = await axios.put(`https://admin.yeahtrips.in/update-coordinator/${trip_id}/${coordinatorId}`, formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data'
+      // Send data to backend
+      const response = await axios.put(
+        `https://admin.yeahtrips.in/update-coordinator/${trip_id}/${coordinatorId}`,
+        formData,
+        {
+          headers: {
+            'Content-Type': 'multipart/form-data', // Important for file uploads
+          },
         }
-      });
+      );
 
-      // Debugging: Log response data
-      console.log('Response:', response.data);
-
-      // Handle successful update
       alert('Coordinator updated successfully');
-
-      // Refresh the page to reflect the latest data
-      window.location.reload();
-
+      window.location.reload(); // Reload the page to reflect the updates
     } catch (err) {
       console.error('Error updating coordinator:', err);
       setError('Failed to update coordinator');
@@ -129,64 +178,61 @@ function Edittrips() {
     }
   };
 
-
-
-  // Example function to update local state
-
-
   const [selectedImage, setSelectedImage] = useState(null);
 
   const handleImageChange = (event) => {
     const file = event.target.files[0];
-    setSelectedImage(file);
+    setSelectedImage(file); // Store new image if selected
   };
-
+  const [allPolicies, setAllPolicies] = useState([]);
+  const [selectedPolicies, setSelectedPolicies] = useState([]);
+  const [selectedPolicyId, setSelectedPolicyId] = useState(null);
   const [isEditingcancellationpolicy, setIsEditingcancellationpolicy] = useState(false);
-  const handleEditPolicyClick = (index) => {
-    setIsEditingcancellationpolicy(index);
-    setEditedPolicy({ ...cancellationPolicies[index] });
-  };
 
-  const handleInputPolicyChange = (event) => {
-    const { name, value } = event.target;
-    setEditedPolicy(prevState => ({ ...prevState, [name]: value }));
-  };
-
-
-  const handleSavePolicyChanges = async (policyId) => {
-    setLoading(true);
-    setError(null);
-
+  const fetchAllPolicies = async () => {
     try {
-      // Debugging: Check the values before sending the request
-      console.log('Saving policy changes:', {
-        policy_startdate: editedPolicy.policy_startdate,
-        policy_endDate: editedPolicy.policy_endDate,
-        fee: editedPolicy.fee,
-        cancellationType: editedPolicy.cancellationType,
-      });
-
-      const response = await axios.put(`https://admin.yeahtrips.in/update-cancellation-policy/${policyId}`, {
-        trip_id,
-        policy_startdate: editedPolicy.policy_startdate,
-        policy_endDate: editedPolicy.policy_endDate,
-        fee: editedPolicy.fee,
-        cancellationType: editedPolicy.cancellationType,
-      });
-
-      console.log('Response:', response.data); // Debugging: Log response data
-
-      // Handle successful update
-      alert('Cancellation policy updated successfully');
-      window.location.reload();
-    } catch (err) {
-      console.error('Error updating cancellation policy:', err);
-      setError('Failed to update cancellation policy');
-    } finally {
-      setLoading(false);
+      const response = await axios.get('https://admin.yeahtrips.in/getcancellationpolicies');
+      setAllPolicies(response.data);
+      console.log("Policies", response.data)
+      const currentPolicyIds = cancellationPolicies.map(policy => policy.policy_id);
+      setSelectedPolicies(currentPolicyIds);
+    } catch (error) {
+      console.error('Error fetching all policies:', error);
     }
   };
 
+  // Handle Edit Button Click
+  const handleEditPolicyClick = () => {
+    fetchAllPolicies();
+    setIsEditingcancellationpolicy(true);
+  };;
+
+  // Handle Checkbox Change
+  const handleCheckboxChange = (policyId) => {
+    setSelectedPolicyId(policyId);
+  };
+
+
+  const handleSavePolicies = async () => {
+    try {
+      const tripId = trip_id;
+      const policyId = cancellationPolicies[0]?.policy_id; // Assuming you're using the first policy_id
+
+      // Prepare the data to be sent to the backend
+      const dataToSend = {
+        trip_id: tripId,
+        policy_id: selectedPolicyId, // Single selected policy_id
+      };
+
+      // Send the data to the backend
+      await axios.put(`https://admin.yeahtrips.in/update-cancellation-policy/${tripId}`, dataToSend);
+
+      setIsEditingcancellationpolicy(false);
+      window.location.reload()
+    } catch (error) {
+      console.error('Error saving policies:', error);
+    }
+  };
 
 
 
@@ -312,6 +358,7 @@ function Edittrips() {
       formData.append("destination", tripDetails.destination);
       formData.append("trip_duration", tripDetails.trip_duration);
       formData.append("whatsapplink", tripDetails.whatsapplink);
+      formData.append("googlemap", tripDetails.googlemap);
       formData.append("traveller_type", tripDetails.traveller_type);
       formData.append("inclusion", tripDetails.inclusion);
       formData.append("exclusion", tripDetails.exclusion);
@@ -394,7 +441,7 @@ function Edittrips() {
     }
 
     try {
-      await axios.put(`https://admin.yeahtrips.in/updatetinerary/${dayIndex}`, formData, {
+      await axios.put(`http://admin.yeahtrips.in/updatetinerary/${dayIndex}`, formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
@@ -427,7 +474,6 @@ function Edittrips() {
       <div key={index}>{item.trim()}.</div>
     ));
   };
-
 
 
   return (
@@ -471,7 +517,7 @@ function Edittrips() {
                 <img
                   src={`https://admin.yeahtrips.in${tripDetails.file_path}`}
                   alt={tripDetails.trip_name}
-                  className="w-full h-auto mb-6"
+                  className="w-full h-[50vh] mb-6"
                 />
               )
             )}
@@ -490,6 +536,7 @@ function Edittrips() {
                 {renderDetail("Destination", "destination", tripDetails, isEditing, handleInputChange)}
                 {renderDetail("Duration", "trip_duration", tripDetails, isEditing, handleInputChange)}
                 {renderDetail("whatsapplink", "whatsapplink", tripDetails, isEditing, handleInputChange)}
+                {renderDetail("googlemaplink of startingpoint", "googlemap", tripDetails, isEditing, handleInputChange)}
               </div>
               <div className="space-y-2">
                 {renderDetail("Traveller Type", "traveller_type", tripDetails, isEditing, handleInputChange)}
@@ -520,6 +567,66 @@ function Edittrips() {
                 </button>
               )}
 
+            </div>
+
+            <div>
+              <h2 className="text-xl font-semibold mb-4">Pickup Points </h2>
+              {pickupPoints.length > 0 ? (
+                <table className="min-w-full border border-gray-300 mb-4">
+                  <thead>
+                    <tr className="bg-gray-100">
+                      <th className="border border-gray-300 px-4 py-2">Point Type</th>
+                      <th className="border border-gray-300 px-4 py-2">Pickup Point</th>
+                      <th className="border border-gray-300 px-4 py-2">Time</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {editedPoints.map((point, index) => (
+                      <tr key={point.id} className="hover:bg-gray-50">
+                        <td className="border border-gray-300 px-4 py-2">
+                          {index === 0 ? 'Starting Point' : 'Additional Point'}
+                        </td>
+                        <td className="border border-gray-300 px-4 py-2">
+                          {isEditingPickupPoints ? ( 
+                            <input
+                              type="text"
+                              value={point.pickuppoint}
+                              onChange={(e) => handleChange(index, 'pickuppoint', e.target.value)}
+                              className="border border-gray-300 px-2 py-1"
+                            />
+                          ) : (
+                            point.pickuppoint
+                          )}
+                        </td>
+                        <td className="border border-gray-300 px-4 py-2">
+                          {isEditingPickupPoints ? ( // Updated here
+                            <input
+                              type="text"
+                              value={point.time}
+                              onChange={(e) => handleChange(index, 'time', e.target.value)}
+                              className="border border-gray-300 px-2 py-1"
+                            />
+                          ) : (
+                            point.time
+                          )}
+                        </td>
+                        
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              ) : (
+                <p>No pickup points available for this trip.</p>
+              )}
+              {isEditingPickupPoints ? ( // Updated here
+                <button className="mt-2 bg-blue-500 text-white px-4 py-2" onClick={handleSavePickupPoints}>
+                  Save Changes
+                </button>
+              ) : (
+                <button className="mt-2 bg-green-500 text-white px-4 py-2" onClick={handleEditClick}>
+                  Edit Pickup Points
+                </button>
+              )}
             </div>
 
             <hr className="my-8" />
@@ -597,7 +704,10 @@ function Edittrips() {
                         <div className="space-y-2">
                           <p className="font-bold">Date: {item.DATE}</p>
                           <p className="text-lg font-semibold">{item.DAY_TITLE}</p>
-                          <p>{item.DAY_DESCRIPTION}</p>
+                          {item.DAY_DESCRIPTION &&
+                            item.DAY_DESCRIPTION.split('.').map((line, lineIndex) => (
+                              <p key={lineIndex}>{line}</p>
+                            ))}
 
                           {/* Show image if present */}
                           {item.DAY_IMG && (
@@ -747,77 +857,82 @@ function Edittrips() {
 
 
       <div>
-        <h1 className="text-center font-extrabold max-w-4xl mx-auto mt-8 text-2xl">Cancellation Policies</h1>
+        <h1 className="text-center font-extrabold max-w-4xl mx-auto mt-8 text-2xl">Cancellation Policy</h1>
         <div className="p-6">
           {cancellationPolicies.length > 0 ? (
             <div className="grid grid-cols-1 gap-6">
-              {cancellationPolicies.map((policy, index) => (
-                <div key={index} className="bg-gray-100 p-4 rounded-md shadow-sm">
-                  <h2 className="text-xl font-bold">Policy #{index + 1}</h2>
-                  <p><strong>Start Day:</strong> {policy.policy_startdate}</p>
-                  <p><strong>End Day:</strong> {policy.policy_endDate}</p>
-                  <p><strong>Fee:</strong> {policy.fee}%</p>
-                  <p><strong>Type:</strong> {policy.cancellationType}</p>
-                  {role !== 'Read-Only' && role !== 'User' && (
-                    <button
-                      onClick={() => handleEditPolicyClick(index)}
-                      className="block mx-auto mt-4 bg-blue-500 text-white px-4 py-2 rounded-md shadow-md hover:bg-blue-600"
-                    >
-                      Edit
-                    </button>
-                  )}
-                  {isEditingcancellationpolicy === index ? (
-                    <div>
-                      <input
-                        type="number"
-                        name="policy_startdate"
-                        value={editedPolicy.policy_startdate || ''}
-                        onChange={handleInputPolicyChange}
-                        className="block w-full mt-2 p-2 border border-gray-300 rounded-md"
-                        placeholder="Start Day"
-                      />
-                      <input
-                        type="number"
-                        name="policy_endDate"
-                        value={editedPolicy.policy_endDate || ''}
-                        onChange={handleInputPolicyChange}
-                        className="block w-full mt-2 p-2 border border-gray-300 rounded-md"
-                        placeholder="End Day"
-                      />
-                      <input
-                        type="number"
-                        name="fee"
-                        value={editedPolicy.fee || ''}
-                        onChange={handleInputPolicyChange}
-                        className="block w-full mt-2 p-2 border border-gray-300 rounded-md"
-                        placeholder="Fee"
-                      />
-                      <select
-                        name="cancellationType"
-                        value={editedPolicy.cancellationType || ''}
-                        onChange={handleInputPolicyChange}
-                        className="block w-full mt-2 p-2 border border-gray-300 rounded-md"
-                      >
-                        <option value="" disabled>Select Type</option>
-                        <option value="percentage">Percentage</option>
-                        <option value="fixed">Amount</option>
-                      </select>
-                      <button
-                        onClick={() => handleSavePolicyChanges(policy.id)}
-                        className="block mx-auto mt-4 bg-green-500 text-white px-4 py-2 rounded-md shadow-md hover:bg-green-600"
-                      >
-                        Save
-                      </button>
-                    </div>
-                  ) : null}
-                </div>
-              ))}
+              <div className="bg-gray-100 p-4 rounded-md shadow-sm">
+                {/* Display policy name and fee type for the first index only */}
+                <h2 className="text-xl font-bold">{cancellationPolicies[0].policy_name}</h2>
+                <p><strong>Fee Type:</strong> {cancellationPolicies[0].fee_type}</p>
+
+                {/* Map through the cancellation policies to display start_date, end_date, and fee */}
+                {cancellationPolicies.map((policy, index) => (
+                  <div key={index} className="mt-2">
+                    <p><strong>Start Day:</strong> {policy.start_date}</p>
+                    <p><strong>End Day:</strong> {policy.end_date}</p>
+                    <p><strong>Fee:</strong> {policy.fee}%</p>
+                  </div>
+                ))}
+
+                {role !== 'Read-Only' && role !== 'User' && (
+                  <button
+                    onClick={handleEditPolicyClick}
+                    className="block mx-auto mt-4 bg-blue-500 text-white px-4 py-2 rounded-md shadow-md hover:bg-blue-600"
+                  >
+                    Edit Policy
+                  </button>
+                )}
+              </div>
             </div>
           ) : (
             <p className="text-center text-lg text-gray-500">No cancellation policies available</p>
           )}
+
+          {isEditingcancellationpolicy && (
+            <div className="mt-6">
+              <h3 className="text-lg font-semibold">Select a Policy to Include:</h3>
+              <div className="flex flex-col">
+                {allPolicies.map(policy => (
+                  <div key={policy.id} className="border p-4 mb-2 rounded-md">
+                    <h4 className="font-bold">{policy.policyName}</h4>
+                    <p><strong>Fee Type:</strong> {policy.feeType}</p>
+                    <div className="flex items-center mt-2">
+                      <input
+                        type="checkbox"
+                        checked={selectedPolicyId === policy.id}
+                        onChange={() => handleCheckboxChange(policy.id)} // Handle checkbox change
+                        className="mr-2"
+                      />
+                      <span>Available Dates:</span>
+                    </div>
+                    <div className="ml-6"> {/* Indent for date ranges */}
+                      {policy.dateRanges.map((range, index) => (
+                        <div key={index} className="flex mt-1">
+                          <span>
+                            Start Date: {range.startDate},
+                            End Date: {range.endDate},
+                            Fee: {range.fee}%
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <button
+                onClick={handleSavePolicies}
+                className="block mt-4 bg-green-500 text-white px-4 py-2 rounded-md shadow-md hover:bg-green-600"
+              >
+                Save Policy
+              </button>
+            </div>
+          )}
+
+
         </div>
       </div>
+
       <div>
         <div>
           <h1 className="text-center font-extrabold  max-w-4xl mx-auto mt-8 text-2xl">BOOKINGS</h1>
