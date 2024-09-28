@@ -5,6 +5,8 @@ import { saveAs } from "file-saver";
 import { format } from 'date-fns';
 import * as XLSX from "xlsx";
 import AdminNavbar from "../Dashboardnavbar/Dashboardnavbar";
+import ReactQuill from 'react-quill';
+import 'react-quill/dist/quill.snow.css';
 function Edittrips() {
   const { trip_id } = useParams();
   const [tripDetails, setTripDetails] = useState(null);
@@ -532,20 +534,18 @@ function Edittrips() {
                 {renderDetail("Start Date", "trip_start_date", tripDetails, isEditing, handleInputChange)}
                 {renderDetail("End Date", "end_date", tripDetails, isEditing, handleInputChange)}
                 {renderDetail("Start Point", "trip_start_point", tripDetails, isEditing, handleInputChange)}
-                {renderDetail("End Point", "trip_end_point", tripDetails, isEditing, handleInputChange)}
                 {renderDetail("Destination", "destination", tripDetails, isEditing, handleInputChange)}
-                {renderDetail("Duration", "trip_duration", tripDetails, isEditing, handleInputChange)}
-                {renderDetail("whatsapplink", "whatsapplink", tripDetails, isEditing, handleInputChange)}
-                {renderDetail("googlemaplink of startingpoint", "googlemap", tripDetails, isEditing, handleInputChange)}
               </div>
               <div className="space-y-2">
                 {renderDetail("Traveller Type", "traveller_type", tripDetails, isEditing, handleInputChange)}
-
+                {renderDetail("Duration", "trip_duration", tripDetails, isEditing, handleInputChange)}
                 {renderDetail("Inclusion", "inclusion", tripDetails, isEditing, handleInputChange)}
                 {renderDetail("Exclusion", "exclusion", tripDetails, isEditing, handleInputChange)}
                 {renderDetail("Points to Note", "points_to_note", tripDetails, isEditing, handleInputChange)}
                 {renderDetail("Trip Type", "trip_type", tripDetails, isEditing, handleInputChange)}
                 {renderDetail("Seat Type", "seat_type", tripDetails, isEditing, handleInputChange)}
+                {renderDetail("End Point", "trip_end_point", tripDetails, isEditing, handleInputChange)}
+                {renderDetail("whatsapplink", "whatsapplink", tripDetails, isEditing, handleInputChange)}
               </div>
             </div>
 
@@ -570,7 +570,7 @@ function Edittrips() {
             </div>
 
             <div>
-              <h2 className="text-xl font-semibold mb-4">Pickup Points </h2>
+              <h2 className="text-xl font-semibold mb-4">Pickup Points</h2>
               {pickupPoints.length > 0 ? (
                 <table className="min-w-full border border-gray-300 mb-4">
                   <thead>
@@ -578,6 +578,7 @@ function Edittrips() {
                       <th className="border border-gray-300 px-4 py-2">Point Type</th>
                       <th className="border border-gray-300 px-4 py-2">Pickup Point</th>
                       <th className="border border-gray-300 px-4 py-2">Time</th>
+                      <th className="border border-gray-300 px-4 py-2">Google Map Link</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -587,7 +588,7 @@ function Edittrips() {
                           {index === 0 ? 'Starting Point' : 'Additional Point'}
                         </td>
                         <td className="border border-gray-300 px-4 py-2">
-                          {isEditingPickupPoints ? ( 
+                          {isEditingPickupPoints ? (
                             <input
                               type="text"
                               value={point.pickuppoint}
@@ -599,7 +600,7 @@ function Edittrips() {
                           )}
                         </td>
                         <td className="border border-gray-300 px-4 py-2">
-                          {isEditingPickupPoints ? ( // Updated here
+                          {isEditingPickupPoints ? (
                             <input
                               type="text"
                               value={point.time}
@@ -610,7 +611,18 @@ function Edittrips() {
                             point.time
                           )}
                         </td>
-                        
+                        <td className="border border-gray-300 px-4 py-2">
+                          {isEditingPickupPoints ? (
+                            <input
+                              type="text"
+                              value={point.googlemap || ''} // Handle if googlemap is null or undefined
+                              onChange={(e) => handleChange(index, 'googlemap', e.target.value)}
+                              className="border border-gray-300 px-2 py-1"
+                            />
+                          ) : (
+                            point.googlemap // Display the URL as plain text
+                          )}
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -618,7 +630,7 @@ function Edittrips() {
               ) : (
                 <p>No pickup points available for this trip.</p>
               )}
-              {isEditingPickupPoints ? ( // Updated here
+              {isEditingPickupPoints ? (
                 <button className="mt-2 bg-blue-500 text-white px-4 py-2" onClick={handleSavePickupPoints}>
                   Save Changes
                 </button>
@@ -628,6 +640,8 @@ function Edittrips() {
                 </button>
               )}
             </div>
+
+
 
             <hr className="my-8" />
 
@@ -862,11 +876,9 @@ function Edittrips() {
           {cancellationPolicies.length > 0 ? (
             <div className="grid grid-cols-1 gap-6">
               <div className="bg-gray-100 p-4 rounded-md shadow-sm">
-                {/* Display policy name and fee type for the first index only */}
                 <h2 className="text-xl font-bold">{cancellationPolicies[0].policy_name}</h2>
                 <p><strong>Fee Type:</strong> {cancellationPolicies[0].fee_type}</p>
 
-                {/* Map through the cancellation policies to display start_date, end_date, and fee */}
                 {cancellationPolicies.map((policy, index) => (
                   <div key={index} className="mt-2">
                     <p><strong>Start Day:</strong> {policy.start_date}</p>
@@ -1057,18 +1069,15 @@ const formatDateForInput = (dateString) => {
   return `${year}-${monthIndex < 10 ? '0' + monthIndex : monthIndex}-${day.padStart(2, '0')}`; // Format as YYYY-MM-DD
 };
 
-// Function to format date to display (e.g., "12th September 2024")
 const formatDateToDisplay = (inputDate) => {
   const date = new Date(inputDate);
   const options = { day: 'numeric', month: 'long', year: 'numeric' };
   const formattedDate = date.toLocaleDateString('en-GB', options);
 
-  // Add ordinal suffix to day
   const dayWithSuffix = addOrdinalSuffix(formattedDate.split(' ')[0]);
   return `${dayWithSuffix} ${formattedDate.split(' ').slice(1).join(' ')}`;
 };
 
-// Helper function to get month index
 const getMonthIndex = (month) => {
   const months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
   return months.indexOf(month) + 1; // Months are 1-indexed
@@ -1082,7 +1091,6 @@ const addOrdinalSuffix = (day) => {
   return `${value}${suffix[index] || suffix[0]}`; // Default to "th"
 };
 const renderDetail = (label, name, tripDetails, isEditing, handleInputChange) => {
-  // Get the value from tripDetails
   let value = tripDetails[name];
 
   // Handle numeric values for cost, seats, etc.
@@ -1090,16 +1098,24 @@ const renderDetail = (label, name, tripDetails, isEditing, handleInputChange) =>
     value = value.toString(); // Convert number to string for display
   }
 
-  // Specific formatting for Inclusion, Exclusion, and Points to Note
-  const isSpecialField = name === 'inclusion' || name === 'exclusion' || name === 'points_to_note';
-
-  // Split the string into lines if it's a special field
-  const displayValue = isSpecialField && typeof value === 'string'
-    ? value.split('.').map(line => line.trim()).filter(line => line)
-    : [value];
+  // Check if the field is one of the special HTML fields
+  const htmlEditorFields = ['trip_description', 'inclusion', 'exclusion', 'points_to_note'];
+  const isSpecialField = htmlEditorFields.includes(name);
 
   // Handle date fields separately
   const isDateField = name === 'trip_start_date' || name === 'end_date';
+
+  // Function to strip HTML tags
+  const stripHtmlTags = (html) => {
+    const tempDiv = document.createElement("div");
+    tempDiv.innerHTML = html;
+    return tempDiv.textContent || tempDiv.innerText || "";
+  };
+
+  // Split content by period (.) for special fields in view mode
+  const displayValue = isSpecialField && !isEditing && typeof value === 'string'
+    ? stripHtmlTags(value).split('.').map((line) => line.trim()).filter((line) => line)
+    : [value]; // Otherwise, return an array with the original value
 
   return (
     <div className="flex flex-col">
@@ -1115,17 +1131,24 @@ const renderDetail = (label, name, tripDetails, isEditing, handleInputChange) =>
             value={formatDateForInput(value)} // Use helper function to format date for input
             onChange={(e) => {
               const selectedDate = new Date(e.target.value);
-              // Format it back to the desired format
               const formattedDate = formatDateToDisplay(selectedDate);
               handleInputChange({ target: { name, value: formattedDate } });
             }}
             className="border border-gray-300 rounded p-2"
           />
+        ) : isSpecialField ? (
+          <ReactQuill
+            id={name}
+            value={value || ''}
+            onChange={(content) => handleInputChange({ target: { name, value: content } })}
+            className="border border-gray-300 rounded p-2"
+            placeholder={`Enter ${label}`}
+          />
         ) : (
           <textarea
             id={name}
             name={name}
-            value={value}
+            value={value || ''}
             onChange={handleInputChange}
             rows="4"
             className="border border-gray-300 rounded p-2"
@@ -1133,18 +1156,31 @@ const renderDetail = (label, name, tripDetails, isEditing, handleInputChange) =>
           />
         )
       ) : (
-        <p className="border border-gray-300 rounded p-2 whitespace-pre-line">
-          {displayValue.map((line, index) => (
-            <span key={index}>
-              {line}
-              {index < displayValue.length - 1 && <br />} {/* Add line breaks for special fields */}
-            </span>
-          ))}
-        </p>
+        isSpecialField ? (
+          <textarea
+            id={name}
+            name={name}
+            value={displayValue.join('\n')}
+            readOnly
+            rows="4"
+            className="border border-gray-300 rounded p-2 whitespace-pre-line"
+          />
+        ) : (
+          <textarea
+            id={name}
+            name={name}
+            value={value || ''}
+            readOnly
+            rows="4"
+            className="border border-gray-300 rounded p-2"
+          />
+        )
       )}
     </div>
   );
 };
+
+
 
 
 

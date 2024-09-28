@@ -53,6 +53,11 @@ const Menu = ({ showSidebar, setShowSidebar }) => {
         navigate('/discountcoupon');  // Navigating to the discount coupon page
     };
 
+    const handleDasshboardClick=() =>{
+        setShowSidebar(false);
+        navigate('/dashboard')
+    }
+
     const handleAddCommunityLinkClick = () => setShowCommunityLinkInput(!showCommunityLinkInput);
 
     const handleSaveCommunityLink = async () => {
@@ -111,6 +116,13 @@ const Menu = ({ showSidebar, setShowSidebar }) => {
                                 User Management
                             </button>
                         </li>
+
+                        <li>
+                            <button onClick={handleDasshboardClick} className="w-full text-left py-3 border-2 border-red-600 rounded-lg text-red-600 font-semibold shadow-md hover:shadow-lg transition-all duration-300">
+                                Dashboard
+                            </button>
+                        </li>
+
                         <li>
                             <button onClick={handleAddCarousalsClick} className="w-full text-left py-3 border-2 border-orange-600 rounded-lg text-orange-600 font-semibold shadow-md hover:shadow-lg transition-all duration-300">
                                 Add Carousals

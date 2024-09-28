@@ -1744,7 +1744,7 @@ app.put('/discountcoupons/:coupon_id', async (req, res) => {
 
 
 app.get('/gettheeditpickuppoints', async (req, res) => {
-    // Extract trip_id from query parameters
+    // Extract trip_id from request body
     const { trip_id } = req.query;
 
     if (!trip_id) {
@@ -1754,9 +1754,26 @@ app.get('/gettheeditpickuppoints', async (req, res) => {
     try {
         const connection = await pool.getConnection();
 
-        const [rows] = await connection.query('SELECT * FROM pickuppoints WHERE trip_id = ?', [trip_id]);
+        // Modify the SQL query to join tripdata and pickuppoints
+        const [rows] = await connection.query(`
+            SELECT pp.*, td.googlemap 
+            FROM pickuppoints pp 
+            JOIN tripdata td ON pp.trip_id = td.trip_id 
+            WHERE pp.trip_id = ?
+        `, [trip_id]);
 
         connection.release();
+
+        if (rows.length > 0) {
+            const googlemapLink = rows[0].googlemap; 
+            rows.forEach((item, index) => {
+                if (index !== 0) {
+                    delete item.googlemap; 
+                } else {
+                    item.googlemap = googlemapLink; 
+                }
+            });
+        }
 
         res.json(rows);
     } catch (err) {
@@ -1766,10 +1783,14 @@ app.get('/gettheeditpickuppoints', async (req, res) => {
 });
 
 
+
+
+
 app.put('/updatethePickupPoints', async (req, res) => {
     const { trip_id, pickupPoints } = req.body;
   
-    console.log(req.body)
+    console.log(req.body); // For debugging
+  
     if (!trip_id || !Array.isArray(pickupPoints)) {
       return res.status(400).json({ error: 'Invalid input' });
     }
@@ -1778,7 +1799,8 @@ app.put('/updatethePickupPoints', async (req, res) => {
     try {
       await connection.beginTransaction();
   
-      const updatePromises = pickupPoints.map(async (point) => {
+      // Update pickuppoints table
+      const updatePickupPointsPromises = pickupPoints.map(async (point) => {
         const { id, pickuppoint, time } = point;
         const sql = `
           UPDATE pickuppoints 
@@ -1789,18 +1811,32 @@ app.put('/updatethePickupPoints', async (req, res) => {
         return result;
       });
   
-      await Promise.all(updatePromises);
+      // Wait for all pickup point updates to finish
+      await Promise.all(updatePickupPointsPromises);
   
+      // Update the googlemap field in the tripdata table (use trip_id to update googlemap)
+      const googlemap = pickupPoints[0]?.googlemap; // Assuming googlemap is provided in the first pickup point
+      if (googlemap) {
+        const updateGoogleMapSql = `
+          UPDATE tripdata 
+          SET googlemap = ?
+          WHERE trip_id = ?
+        `;
+        await connection.execute(updateGoogleMapSql, [googlemap, trip_id]);
+      }
+  
+      // Commit the transaction after all updates
       await connection.commit();
-      res.status(200).json({ message: 'Pickup points updated successfully!' });
+      res.status(200).json({ message: 'Pickup points and Google Map link updated successfully!' });
     } catch (error) {
-      console.error('Error updating pickup points:', error);
+      console.error('Error updating pickup points and Google Map link:', error);
       await connection.rollback();
-      res.status(500).json({ error: 'Failed to update pickup points' });
+      res.status(500).json({ error: 'Failed to update pickup points and Google Map link' });
     } finally {
       connection.release();
     }
-  })
+  });
+  
 
   app.get('/getuser/:id', async (req, res) => {
     const userId = req.params.id; // Get the user ID from the request parameters
