@@ -1340,6 +1340,19 @@ app.put('/update-cancellation-policy/:tripId', async (req, res) => {
 });
 
 
+app.get('/getwhatsapp-links', async (req, res) => {
+    try {
+        const connection = await pool.getConnection(); 
+        const [results] = await connection.query('SELECT * FROM communitywhatsapp'); // Use the appropriate table name
+        connection.release(); 
+        res.json(results);
+        console.log(results)
+    } catch (error) {
+        console.error('Error fetching data: ', error);
+        res.status(500).json({ error: 'Database query failed' });
+    }
+});
+
 
 app.delete('/whatsapp-links/:id', async (req, res) => {
     const { id } = req.params;
