@@ -100,6 +100,36 @@ function Edittrips() {
     setEditedPoints(updatedPoints);
   };
 
+
+  const hours = Array.from({ length: 12 }, (_, i) => (i === 0 ? 12 : i)); // 1 to 12
+  const minutes = Array.from({ length: 60 }, (_, i) => (i < 10 ? `0${i}` : i)); // 00 to 59
+  const amPmOptions = ['AM', 'PM'];
+
+
+
+  const handleTimeChange = (index, hour, minute, amPm) => {
+    // Get the existing time
+    const existingTime = editedPoints[index].time;
+
+    // Split the existing time to get components
+    const [currentHour, currentMinute, currentSuffix] = existingTime.split(/:|\s+/);
+
+    // Use selected values or fallback to current values
+    const newHour = hour !== undefined ? hour : currentHour; // Use the selected hour or the current hour
+    const newMinute = minute !== undefined ? minute : currentMinute; // Use the selected minute or the current minute
+    const newSuffix = amPm !== undefined ? amPm : currentSuffix; // Use the selected AM/PM or the current suffix
+
+    // Construct the new time string without duplicates
+    const cleanTime = `${newHour}:${newMinute} ${newSuffix}`.trim();
+
+    // Update the time in editedPoints
+    handleChange(index, 'time', cleanTime);
+  };
+
+
+
+
+
   const handleSavePickupPoints = async () => {
     try {
       await axios.put('https://admin.yeahtrips.in/updatethePickupPoints', {
@@ -568,65 +598,86 @@ function Edittrips() {
               )}
 
             </div>
-
             <div>
               <h2 className="text-xl font-semibold mb-4">Pickup Points</h2>
               {pickupPoints.length > 0 ? (
-                <table className="min-w-full border border-gray-300 mb-4">
-                  <thead>
-                    <tr className="bg-gray-100">
-                      <th className="border border-gray-300 px-4 py-2">Point Type</th>
-                      <th className="border border-gray-300 px-4 py-2">Pickup Point</th>
-                      <th className="border border-gray-300 px-4 py-2">Time</th>
-                      <th className="border border-gray-300 px-4 py-2">Google Map Link</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {editedPoints.map((point, index) => (
-                      <tr key={point.id} className="hover:bg-gray-50">
-                        <td className="border border-gray-300 px-4 py-2">
-                          {index === 0 ? 'Starting Point' : 'Additional Point'}
-                        </td>
-                        <td className="border border-gray-300 px-4 py-2">
+                <div className="grid grid-cols-1 gap-4">
+                  {editedPoints.map((point, index) => (
+                    <div key={point.id} className="border p-4 rounded shadow-lg hover:bg-gray-50">
+                      <h3 className="font-semibold">{index === 0 ? 'Starting Point' : 'Additional Point'}</h3>
+                      <p>
+                        <strong>Pickup Point:</strong>
+                        {isEditingPickupPoints ? (
+                          <input
+                            type="text"
+                            value={point.pickuppoint}
+                            onChange={(e) => handleChange(index, 'pickuppoint', e.target.value)}
+                            className="border border-gray-300 px-2 py-1 w-full"
+                          />
+                        ) : (
+                          point.pickuppoint
+                        )}
+                      </p>
+                      <p>
+                        <strong>Time:</strong>
+                        {isEditingPickupPoints ? (
+                          <div className="flex items-center space-x-2">
+                            <select
+                              className="border border-gray-300 px-2 py-1 w-16"
+                              value={point.time ? point.time.split(':')[0] : '12'} // Get hour part
+                              onChange={(e) => handleTimeChange(index, e.target.value, point.time ? point.time.split(':')[1].split(' ')[0] : '00', point.time ? point.time.split(' ')[1] : 'AM')}
+                            >
+                              {hours.map(hour => (
+                                <option key={hour} value={hour}>
+                                  {hour}
+                                </option>
+                              ))}
+                            </select>
+                            <select
+                              className="border border-gray-300 px-2 py-1 w-16"
+                              value={point.time ? point.time.split(':')[1].split(' ')[0] : '00'} // Get minute part
+                              onChange={(e) => handleTimeChange(index, point.time ? point.time.split(':')[0] : '12', e.target.value, point.time ? point.time.split(' ')[1] : 'AM')}
+                            >
+                              {minutes.map(minute => (
+                                <option key={minute} value={minute}>
+                                  {minute}
+                                </option>
+                              ))}
+                            </select>
+                            <select
+                              className="border border-gray-300 px-2 py-1 w-16"
+                              value={point.time ? point.time.split(' ')[1] : 'AM'} // Get AM/PM part
+                              onChange={(e) => handleTimeChange(index, point.time ? point.time.split(':')[0] : '12', point.time ? point.time.split(':')[1].split(' ')[0] : '00', e.target.value)}
+                            >
+                              {amPmOptions.map(option => (
+                                <option key={option} value={option}>
+                                  {option}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        ) : (
+                          point.time
+                        )}
+                      </p>
+                      {index === 0 && (
+                        <p>
+                          <strong>Google Map Link:</strong>
                           {isEditingPickupPoints ? (
                             <input
                               type="text"
-                              value={point.pickuppoint}
-                              onChange={(e) => handleChange(index, 'pickuppoint', e.target.value)}
-                              className="border border-gray-300 px-2 py-1"
-                            />
-                          ) : (
-                            point.pickuppoint
-                          )}
-                        </td>
-                        <td className="border border-gray-300 px-4 py-2">
-                          {isEditingPickupPoints ? (
-                            <input
-                              type="text"
-                              value={point.time}
-                              onChange={(e) => handleChange(index, 'time', e.target.value)}
-                              className="border border-gray-300 px-2 py-1"
-                            />
-                          ) : (
-                            point.time
-                          )}
-                        </td>
-                        <td className="border border-gray-300 px-4 py-2">
-                          {isEditingPickupPoints ? (
-                            <input
-                              type="text"
-                              value={point.googlemap || ''} // Handle if googlemap is null or undefined
+                              value={point.googlemap || ''}
                               onChange={(e) => handleChange(index, 'googlemap', e.target.value)}
-                              className="border border-gray-300 px-2 py-1"
+                              className="border border-gray-300 px-2 py-1 w-full"
                             />
                           ) : (
-                            point.googlemap // Display the URL as plain text
+                            point.googlemap
                           )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                        </p>
+                      )}
+                    </div>
+                  ))}
+                </div>
               ) : (
                 <p>No pickup points available for this trip.</p>
               )}
@@ -640,6 +691,7 @@ function Edittrips() {
                 </button>
               )}
             </div>
+
 
 
 
