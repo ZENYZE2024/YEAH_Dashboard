@@ -248,54 +248,7 @@ app.post('/adduser', upload.single('image'), async (req, res) => {
     }
 });
 
-app.post('/changepassword', async (req, res) => {
-    const { email, currentPassword, newPassword } = req.body; // Receiving current password along with new password
-    console.log("changepassword", req.body);
-    
-    try {
-        const connection = await pool.getConnection();
 
-        // Find the user by email in the database
-        const [user] = await connection.execute(
-            'SELECT id, password FROM tripusers WHERE email = ?',
-            [email]
-        );
-
-        // If user not found, return an error
-        if (user.length === 0) {
-            await connection.release();
-            return res.status(404).json({ message: 'User not found' });
-        }
-
-        const userId = user[0].id;
-        const existingHashedPassword = user[0].password;
-
-        // Verify the current password
-        const isPasswordMatch = await bcrypt.compare(currentPassword, existingHashedPassword);
-        
-        if (!isPasswordMatch) {
-            await connection.release();
-            return res.status(401).json({ message: 'Current password is incorrect' });
-        }
-
-        // Hash the new password
-        const hashedNewPassword = await bcrypt.hash(newPassword, 10);
-
-        // Update the user's password in the database
-        await connection.execute(
-            'UPDATE tripusers SET password = ? WHERE id = ?',
-            [hashedNewPassword, userId]
-        );
-
-        // Release the connection and send success response
-        await connection.release();
-
-        res.status(200).json({ message: 'Password changed successfully' });
-    } catch (error) {
-        console.error('Error during password change:', error);
-        res.status(500).json({ message: 'Error during password change' });
-    }
-});
 
 app.post('/verifytheotp', async (req, res) => {
     const { email, otp } = req.body;
