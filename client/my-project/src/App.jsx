@@ -22,6 +22,9 @@ import CouponForm from "./components/Coupon/Couponedit";
 import AddCouponForm from "./components/Coupon/Coupon";
 import EditUser from "./components/Userslist/Edituser";
 import EditPolicies from "./components/Cancellationpolicy/Editcancellationpolicies";
+import ForgotPassword from "./components/Forgotpassword/Forgotpassword";
+import VerifyOTP from "./components/Verifyotp/Verifyotp";
+import NewPasswordComponent from "./components/Newpasswordcomponent/Newpasswordcomponent.";
 function App(){
        return(
         <>
@@ -48,6 +51,9 @@ function App(){
                             <Route path="add-coupon" exact element={<AddCouponForm/>}/>
                             <Route path="/edituser/:userId" exact element={<EditUser />} />
                             <Route path="/editpolicies/:policyId" exact element={<EditPolicies/>} />
+                            <Route path="/forgot-password" exact element={<ForgotPassword/>}/>
+                            <Route path="/verify-otp" exact element={<VerifyOTP/>}/>
+                            <Route path="/createnewpassword" exact  element={<NewPasswordComponent/>}/>
                      </Routes>
               </div>
         </Router>

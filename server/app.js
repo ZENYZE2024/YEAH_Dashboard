@@ -11,7 +11,7 @@ const jwt = require('jsonwebtoken');
 dotenv.config();
 app.use(cors());
 const multer = require('multer');
-
+const nodemailer = require('nodemailer');
 
 app.use(express.json());
 app.use(bodyParser.json({ limit: '50mb' }));
@@ -132,6 +132,79 @@ const pool = mysql.createPool({
 //         }
 //     };
 // };
+const otps = {};
+
+
+const transporter = nodemailer.createTransport({
+    service: 'Gmail',
+    auth: {
+        user: 'dev.yeahtrip@gmail.com',
+        pass: 'fnzz xhlc jqsg gxqm'
+    }
+});
+
+const sendOTPByEmail = (email, otp) => {
+    const mailOptions = {
+        from: 'dev.yeahtrip@gmail.com',
+        to: email,
+        subject: 'Your OTP Code',
+        text: `Your OTP code is ${otp}. It is valid for a short period. Please do not share it with anyone.`
+    };
+
+    transporter.sendMail(mailOptions, (error, info) => {
+        if (error) {
+            console.error('Error sending OTP email:', error);
+        } else {
+            console.log('OTP email sent:', info.response);
+        }
+    });
+};
+
+function verifyToken(req, res, next) {
+    const token = req.headers['authorization'];
+
+    if (!token) return res.status(403).json({ message: 'No token provided' });
+
+    jwt.verify(token, process.env.PRIVATE_KEY, (err, decoded) => {
+        if (err) return res.status(500).json({ message: 'Failed to authenticate token' });
+
+        // If token is valid, attach the userId to the request
+        req.userId = decoded.userId;
+        next();
+    });
+}
+
+app.post('/generatenewpassword', async (req, res) => {
+    const { email, newPassword } = req.body;
+
+    if (!email || !newPassword) {
+        return res.status(400).json({ message: 'Email and new password are required.' });
+    }
+
+    const connection = await pool.getConnection();
+
+    try {
+        // Check if the user exists in the tripusers table
+        const [rows] = await connection.query('SELECT * FROM tripusers WHERE email = ?', [email]);
+
+        if (rows.length === 0) {
+            return res.status(404).json({ message: 'Email address not found.' });
+        }
+
+        // Hash the new password
+        const hashedPassword = await bcrypt.hash(newPassword, 10); // You can adjust the salt rounds (10 is common)
+
+        // Update the user's password in the database
+        await connection.query('UPDATE tripusers SET password = ? WHERE email = ?', [hashedPassword, email]);
+
+        res.status(200).json({ success: true, message: 'Password updated successfully.' });
+    } catch (error) {
+        console.error('Error updating password:', error);
+        res.status(500).json({success: false, message: 'Error processing request. Please try again later.' });
+    } finally {
+        if (connection) connection.release();
+    }
+});
 
 app.post('/adduser', upload.single('image'), async (req, res) => {
     const { email, password, role, name, link, profile_mode } = req.body;
@@ -174,6 +247,101 @@ app.post('/adduser', upload.single('image'), async (req, res) => {
         res.status(500).json({ message: 'Error adding user' });
     }
 });
+
+app.post('/changepassword', async (req, res) => {
+    const { email, currentPassword, newPassword } = req.body; // Receiving current password along with new password
+    console.log("changepassword", req.body);
+    
+    try {
+        const connection = await pool.getConnection();
+
+        // Find the user by email in the database
+        const [user] = await connection.execute(
+            'SELECT id, password FROM tripusers WHERE email = ?',
+            [email]
+        );
+
+        // If user not found, return an error
+        if (user.length === 0) {
+            await connection.release();
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        const userId = user[0].id;
+        const existingHashedPassword = user[0].password;
+
+        // Verify the current password
+        const isPasswordMatch = await bcrypt.compare(currentPassword, existingHashedPassword);
+        
+        if (!isPasswordMatch) {
+            await connection.release();
+            return res.status(401).json({ message: 'Current password is incorrect' });
+        }
+
+        // Hash the new password
+        const hashedNewPassword = await bcrypt.hash(newPassword, 10);
+
+        // Update the user's password in the database
+        await connection.execute(
+            'UPDATE tripusers SET password = ? WHERE id = ?',
+            [hashedNewPassword, userId]
+        );
+
+        // Release the connection and send success response
+        await connection.release();
+
+        res.status(200).json({ message: 'Password changed successfully' });
+    } catch (error) {
+        console.error('Error during password change:', error);
+        res.status(500).json({ message: 'Error during password change' });
+    }
+});
+
+app.post('/verifytheotp', async (req, res) => {
+    const { email, otp } = req.body;
+    console.log(req.body); // Log the received data for debugging
+    console.log("otpstored", otps);
+
+    // Check if the email exists in the OTP storage and the OTP matches
+    if (otps[email] && otps[email].otp === otp) {
+        delete otps[email]; // Remove OTP after verification
+        return res.status(200).json({ message: 'OTP verified successfully.' });
+    } else {
+        // If OTP does not match
+        return res.status(400).json({ message: 'Invalid OTP. Please try again.' });
+    }
+});
+
+
+
+app.post('/forgotthepassword', async (req, res) => {
+    const { email } = req.body;
+    const connection = await pool.getConnection();
+
+    try {
+        const [rows] = await connection.query('SELECT * FROM tripusers WHERE email = ?', [email]);
+
+        if (rows.length === 0) {
+            return res.status(404).json({ message: 'Email address not found.' });
+        }
+
+        const otp = Math.floor(1000 + Math.random() * 9000).toString(); // Random 4-digit OTP
+
+        // Store OTP in the format: { email: email, otp: otp }
+        otps[email] = { email: email, otp: otp }; 
+
+        sendOTPByEmail(email, otp);
+        res.status(200).json({ message: 'OTP sent to your email address.' });
+    } catch (error) {
+        console.error('Error in forgot-password:', error);
+        res.status(500).json({ message: 'Error processing request. Please try again later.' });
+    } finally {
+        if (connection) connection.release();
+    }
+});
+
+
+
 
 app.put('/updateuser/:userId', upload.single('profile_image'), async (req, res) => {
     const { userId } = req.params;

@@ -473,7 +473,7 @@ function Edittrips() {
     }
 
     try {
-      await axios.put(`http://admin.yeahtrips.in/updatetinerary/${dayIndex}`, formData, {
+      await axios.put(`https://admin.yeahtrips.in/updatetinerary/${dayIndex}`, formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
@@ -686,9 +686,11 @@ function Edittrips() {
                   Save Changes
                 </button>
               ) : (
-                <button className="mt-2 bg-green-500 text-white px-4 py-2" onClick={handleEditClick}>
-                  Edit Pickup Points
-                </button>
+                (role !== 'Read-Only' && role !== 'User') && (
+                  <button className="mt-2 bg-green-500 text-white px-4 py-2" onClick={handleEditClick}>
+                    Edit Pickup Points
+                  </button>
+                )
               )}
             </div>
 
