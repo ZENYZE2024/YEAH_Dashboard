@@ -25,6 +25,11 @@ import EditPolicies from "./components/Cancellationpolicy/Editcancellationpolici
 import ForgotPassword from "./components/Forgotpassword/Forgotpassword";
 import VerifyOTP from "./components/Verifyotp/Verifyotp";
 import NewPasswordComponent from "./components/Newpasswordcomponent/Newpasswordcomponent.";
+import Blog from "./components/Blogs/Blogs";
+import CommunityMembers from "./components/Communitymembers/Communitymembers.";
+import UploadPerfectMoment from "./Perfectmoments/Perfectmoments";
+import EditCancellationPolicy from "./components/Editcomponent/Editpolicies";
+import WhatsApp from "./components/Whatsapp/Whatsapp.";
 function App(){
        return(
         <>
@@ -54,6 +59,11 @@ function App(){
                             <Route path="/forgot-password" exact element={<ForgotPassword/>}/>
                             <Route path="/verify-otp" exact element={<VerifyOTP/>}/>
                             <Route path="/createnewpassword" exact  element={<NewPasswordComponent/>}/>
+                            <Route path="/createblog" exact element={<Blog/>}/>
+                            <Route path="/communitymembers" exact element={<CommunityMembers/>}/>
+                            <Route path="/perfectmoments"   exact element={<UploadPerfectMoment/>}/>
+                            <Route path="/edit-cancellation-policy/:tripId" element={<EditCancellationPolicy />} />
+                            <Route path="/whatsapp" exact element={<WhatsApp/>}/>
                      </Routes>
               </div>
         </Router>

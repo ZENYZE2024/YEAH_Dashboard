@@ -3,10 +3,11 @@ import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import AdminNavbar from '../Dashboardnavbar/Dashboardnavbar';
 
-
 function Userslist() {
     const [users, setUsers] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [searchTerm, setSearchTerm] = useState('');
+
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -19,7 +20,7 @@ function Userslist() {
                 setUsers(filteredUsers);
                 setLoading(false);
             } catch (error) {
-                console.error('Error fetching Users:', error);
+                console.error('Error fetching users:', error);
                 setLoading(false);
             }
         };
@@ -29,18 +30,15 @@ function Userslist() {
     const handleAddUserClick = () => {
         navigate('/adduser');
     };
+
     const handleEditUserClick = (userId) => {
         navigate(`/edituser/${userId}`);
     };
-    
-    // const deleteUser = async (userId) => {
-    //     try {
-    //         await axios.delete(`http://localhost:3000/deleteuser/${userId}`);
-    //         setUsers(users.filter(user => user.id !== userId));
-    //     } catch (error) {
-    //         console.error('Error deleting user:', error);
-    //     }
-    // };
+
+    // Filter users based on search term
+    const filteredUsers = users.filter(user =>
+        user.email.toLowerCase().includes(searchTerm.toLowerCase())
+    );
 
     return (
         <div>
@@ -57,6 +55,18 @@ function Userslist() {
                         Add Member
                     </button>
                 </div>
+                
+                {/* Search Input */}
+                <div className="mb-4">
+                    <input
+                        type="text"
+                        placeholder="Search by email"
+                        className="border rounded-lg p-2 w-full"
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                    />
+                </div>
+
                 {loading ? (
                     <p className="text-center text-lg text-gray-600">Loading users...</p>
                 ) : (
@@ -66,29 +76,29 @@ function Userslist() {
                                 <tr>
                                     <th className="py-3 px-6 text-left">Email</th>
                                     <th className="py-3 px-6 text-left">Role</th>
+                                    <th className="py-3 px-6 text-left">Position</th> {/* Added Position column */}
                                     <th className="py-3 px-6 text-left">Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {users.map((user) => (
+                                {filteredUsers.map((user) => (
                                     <tr key={user.id} className="border-b hover:bg-gray-100">
                                         <td className="py-3 px-6">{user.email}</td>
                                         <td className="py-3 px-6">{user.role}</td>
+                                        <td className="py-3 px-6">{user.position || 'Not Set'}</td> {/* Display position */}
                                         <td className="py-3 px-6">
-    <button
-        onClick={() => handleEditUserClick(user.id)}
-        className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition duration-300 mr-2"
-    >
-        Edit
-    </button>
-    <button
-        // onClick={() => deleteUser(user.id)} 
-        className="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition duration-300"
-    >
-        Delete
-    </button>
-</td>
-
+                                            <button
+                                                onClick={() => handleEditUserClick(user.id)}
+                                                className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition duration-300 mr-2"
+                                            >
+                                                Edit
+                                            </button>
+                                            <button
+                                                className="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition duration-300"
+                                            >
+                                                Delete
+                                            </button>
+                                        </td>
                                     </tr>
                                 ))}
                             </tbody>

@@ -1,48 +1,25 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
 import { FaTimes } from 'react-icons/fa';  // Import FontAwesome close icon
 
 const Menu = ({ showSidebar, setShowSidebar }) => {
     const navigate = useNavigate();
-    const [showCommunityLinkInput, setShowCommunityLinkInput] = useState(false);
-    const [communityLink, setCommunityLink] = useState('');
-    const [currentLink, setCurrentLink] = useState('');
-    const [currentLinkId, setCurrentLinkId] = useState(null);
-
-    useEffect(() => {
-        const fetchCommunityLink = async () => {
-            try {
-                const response = await axios.get('https://admin.yeahtrips.in/getwhatsapp-links');
-                if (response.data && response.data.length > 0) {
-                    setCurrentLink(response.data[0].link || '');
-                    setCommunityLink(response.data[0].link || '');
-                    setCurrentLinkId(response.data[0].id || null);
-                } else {
-                    setCurrentLink('');
-                    setCommunityLink('');
-                    setCurrentLinkId(null);
-                }
-            } catch (error) {
-                console.error('Error fetching WhatsApp community link:', error);
-            }
-        };
-
-        fetchCommunityLink();
-    }, []);
 
     const handleUserManagementClick = () => {
         setShowSidebar(false);
         navigate('/usersmanagement');
     };
+
     const handleAddCarousalsClick = () => {
         setShowSidebar(false);
         navigate('/addcarousals');
     };
+
     const handleAddReviewClick = () => {
         setShowSidebar(false);
         navigate('/addreview');
     };
+
     const handleCancellationPolicyClick = () => {
         setShowSidebar(false);
         navigate('/cancellationpolicy');
@@ -50,59 +27,38 @@ const Menu = ({ showSidebar, setShowSidebar }) => {
 
     const handleCreateDiscountCouponClick = () => {
         setShowSidebar(false);
-        navigate('/discountcoupon');  // Navigating to the discount coupon page
+        navigate('/discountcoupon');  // Navigate to the discount coupon page
     };
 
-    const handleDasshboardClick=() =>{
+    const handleDashboardClick = () => {
         setShowSidebar(false);
-        navigate('/dashboard')
-    }
-
-    const handleAddCommunityLinkClick = () => setShowCommunityLinkInput(!showCommunityLinkInput);
-
-    const handleSaveCommunityLink = async () => {
-        if (!communityLink) {
-            alert('Please enter a link.');
-            return;
-        }
-
-        try {
-            if (currentLinkId === null) {
-                const response = await axios.post('https://admin.yeahtrips.in/whatsapp-links', { link: communityLink });
-                setCurrentLink(response.data.link || '');
-                setCommunityLink(response.data.link || '');
-                setCurrentLinkId(response.data.id || null);
-            } else {
-                await axios.put(`https://admin.yeahtrips.in/updatewhatsapp-links/${currentLinkId}`, { link: communityLink });
-                setCurrentLink(communityLink);
-            }
-            setShowCommunityLinkInput(false);
-        } catch (error) {
-            console.error('Error saving WhatsApp community link:', error);
-        }
+        navigate('/dashboard');
     };
 
-    const handleDeleteCommunityLink = async () => {
-        if (currentLinkId === null) {
-            alert('No link to delete.');
-            return;
-        }
+    const handlePerfectMomentsClick = () => {
+        setShowSidebar(false);
+        navigate('/perfectmoments');  // Navigate to the Perfect Moments page
+    };
 
-        try {
-            await axios.delete(`https://admin.yeahtrips.in/whatsapp-links/${currentLinkId}`);
-            setCurrentLink('');
-            setCommunityLink('');
-            setCurrentLinkId(null);
-            setShowCommunityLinkInput(false);
-        } catch (error) {
-            console.error('Error deleting WhatsApp community link:', error);
-        }
+    const handleBlogsClick = () => {
+        setShowSidebar(false);
+        navigate('/createblog');  
+    };
+
+    const handleCommunityMembersClick = () => {
+        setShowSidebar(false);
+        navigate('/communitymembers');  // Navigate to the Community Members page
+    };
+
+    const handleAddCommunityLinkClick = () => {
+        setShowSidebar(false);
+        navigate('/whatsapp');  // Navigate to WhatsApp component
     };
 
     return (
         <>
             {showSidebar && (
-                <div className="w-64 bg-white shadow-lg h-full fixed left-0 top-0 p-6 z-10">
+                <div className="w-64 bg-white shadow-lg h-full fixed left-0 top-0 p-6 z-10 overflow-y-auto" style={{ maxHeight: '100vh' }}>
                     {/* Close icon */}
                     <div className="flex justify-end mb-4">
                         <button onClick={() => setShowSidebar(false)} className="text-gray-600 hover:text-gray-900 transition-colors">
@@ -118,7 +74,7 @@ const Menu = ({ showSidebar, setShowSidebar }) => {
                         </li>
 
                         <li>
-                            <button onClick={handleDasshboardClick} className="w-full text-left py-3 border-2 border-red-600 rounded-lg text-red-600 font-semibold shadow-md hover:shadow-lg transition-all duration-300">
+                            <button onClick={handleDashboardClick} className="w-full text-left py-3 border-2 border-red-600 rounded-lg text-red-600 font-semibold shadow-md hover:shadow-lg transition-all duration-300">
                                 Dashboard
                             </button>
                         </li>
@@ -134,28 +90,14 @@ const Menu = ({ showSidebar, setShowSidebar }) => {
                             </button>
                         </li>
                         <li>
+                            <button onClick={handleCommunityMembersClick} className="w-full text-left py-3 border-2 border-purple-600 rounded-lg text-purple-600 font-semibold shadow-md hover:shadow-lg transition-all duration-300">
+                                Community Members
+                            </button>
+                        </li>
+                        <li>
                             <button onClick={handleAddCommunityLinkClick} className="w-full text-left py-3 border-2 border-green-600 rounded-lg text-green-600 font-semibold shadow-md hover:shadow-lg transition-all duration-300">
                                 Add WhatsApp Community Link
                             </button>
-                            {showCommunityLinkInput && (
-                                <div className="mt-4 p-4 bg-gray-100 border rounded-lg shadow-inner">
-                                    <input
-                                        type="text"
-                                        value={communityLink}
-                                        onChange={(e) => setCommunityLink(e.target.value)}
-                                        placeholder="Enter WhatsApp community link"
-                                        className="w-full px-4 py-2 border border-gray-300 rounded-lg mb-4"
-                                    />
-                                    <div className="flex space-x-4">
-                                        <button onClick={handleSaveCommunityLink} className="w-1/2 py-2 px-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 shadow-md transition-transform transform hover:scale-105 duration-300">
-                                            Save Link
-                                        </button>
-                                        <button onClick={handleDeleteCommunityLink} className="w-1/2 py-2 px-4 bg-red-600 text-white rounded-lg hover:bg-red-700 shadow-md transition-transform transform hover:scale-105 duration-300">
-                                            Delete Link
-                                        </button>
-                                    </div>
-                                </div>
-                            )}
                         </li>
                         <li>
                             <button onClick={handleCreateDiscountCouponClick} className="w-full text-left py-3 border-2 border-yellow-600 rounded-lg text-yellow-600 font-semibold shadow-md hover:shadow-lg transition-all duration-300">
@@ -165,6 +107,16 @@ const Menu = ({ showSidebar, setShowSidebar }) => {
                         <li>
                             <button onClick={handleCancellationPolicyClick} className="w-full text-left py-3 border-2 border-green-600 rounded-lg text-green-600 font-semibold shadow-md hover:shadow-lg transition-all duration-300">
                                 Cancellation Policy
+                            </button>
+                        </li>
+                        <li>
+                            <button onClick={handlePerfectMomentsClick} className="w-full text-left py-3 border-2 border-purple-600 rounded-lg text-purple-600 font-semibold shadow-md hover:shadow-lg transition-all duration-300">
+                                Perfect Moments
+                            </button>
+                        </li>
+                        <li>
+                            <button onClick={handleBlogsClick} className="w-full text-left py-3 border-2 border-blue-600 rounded-lg text-blue-600 font-semibold shadow-md hover:shadow-lg transition-all duration-300">
+                                Blogs
                             </button>
                         </li>
                     </ul>

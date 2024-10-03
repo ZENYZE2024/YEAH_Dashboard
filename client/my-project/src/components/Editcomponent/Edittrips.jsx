@@ -7,6 +7,7 @@ import * as XLSX from "xlsx";
 import AdminNavbar from "../Dashboardnavbar/Dashboardnavbar";
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
+
 function Edittrips() {
   const { trip_id } = useParams();
   const [tripDetails, setTripDetails] = useState(null);
@@ -22,6 +23,8 @@ function Edittrips() {
   const [coordinators, setCoordinators] = useState([]);
   const [editedPolicy, setEditedPolicy] = useState(null);
   const [cancellationPolicies, setCancellationPolicies] = useState([]);
+
+  const navigate =useNavigate();
   useEffect(() => {
     const fetchData = async () => {
 
@@ -147,6 +150,17 @@ function Edittrips() {
 
   const [isEditingcordinators, setIsEditingcordinators] = useState(false);
   const [editedCoordinator, setEditedCoordinator] = useState({});
+  const [newCoordinator, setNewCoordinator] = useState({
+    name: '',
+    email: '',
+    role: '',
+
+  }); const [coordinatorOptions, setCoordinatorOptions] = useState([]);
+  const [isAddingMember, setIsAddingMember] = useState(false); // State for showing/hiding the add member form
+  const [showAddMemberForm, setShowAddMemberForm] = useState(false);
+  const toggleAddMemberForm = () => {
+    setShowAddMemberForm((prev) => !prev);
+  };
 
   const handleEditcordinatorClick = (index) => {
     setIsEditingcordinators(index);
@@ -154,14 +168,90 @@ function Edittrips() {
     setSelectedImage(coordinators[index].image); // Set the current image in state
   };
 
-  const handleInputcordinatorChange = (e) => {
+  const handleInputcordinatorChange = (e, isNew = false) => {
     const { name, value } = e.target;
-    setEditedCoordinator((prev) => ({
-      ...prev,
-      [name]: value
-    }));
+
+    if (isNew) {
+      // If isNew is true, update the newCoordinator state
+      setNewCoordinator((prev) => ({
+        ...prev,
+        [name]: value
+      }));
+    } else {
+      // Otherwise, update the editedCoordinator state
+      setEditedCoordinator((prev) => ({
+        ...prev,
+        [name]: value
+      }));
+    }
   };
 
+
+  useEffect(() => {
+    // Fetch the coordinators from the database
+    const fetchCoordinators = async () => {
+      try {
+        const response = await axios.get('https://admin.yeahtrips.in/getthecoordinators');
+        setCoordinatorOptions(response.data);
+
+      } catch (err) {
+        console.error('Error fetching coordinators:', err);
+      }
+    };
+
+    fetchCoordinators();
+  }, []);
+
+
+  const handleNewCoordinatorChange = (e) => {
+    const { name, value } = e.target;
+
+    // Update the selected name
+    setNewCoordinator((prev) => ({ ...prev, [name]: value }));
+
+    // Auto-populate email when a coordinator is selected
+    if (name === 'name') {
+      const selectedCoordinator = coordinatorOptions.find(coord => coord.name === value);
+      setNewCoordinator((prev) => ({
+        ...prev,
+        email: selectedCoordinator ? selectedCoordinator.email : '' // Auto-populate or clear email
+      }));
+    }
+  };
+
+
+
+  const handleAddCoordinator = async () => {
+    // Ensure a coordinator is selected
+    if (!newCoordinator.name) return;
+
+    // Find the selected coordinator based on name
+    const selectedCoordinator = coordinatorOptions.find(coord => coord.name === newCoordinator.name);
+
+    if (selectedCoordinator) {
+      // Prepare the data to be sent
+      const coordinatorData = {
+        name: selectedCoordinator.name,
+        email: selectedCoordinator.email,
+        role: newCoordinator.role,
+        tripId: trip_id // Assuming trip_id is available in the component
+      };
+
+      try {
+        // Send the POST request to add the coordinator
+        const response = await axios.post('https://admin.yeahtrips.in/coordinatorstrip', coordinatorData);
+        // Assuming the API returns the added coordinator, you can update the state
+        setCoordinators([...coordinators, { ...coordinatorData, id: Date.now() }]);
+        alert('Coordinator added successfully'); // Optional: show success message
+      } catch (err) {
+        console.error('Error adding coordinator:', err);
+        alert('Failed to add coordinator'); // Optional: show error message
+      }
+
+      // Reset the newCoordinator state after submission
+      setNewCoordinator({ name: '', email: '', role: '', link: '', profile_mode: '' });
+    }
+  };
 
 
   const handleSaveChanges = async (coordinatorId) => {
@@ -210,6 +300,7 @@ function Edittrips() {
     }
   };
 
+
   const [selectedImage, setSelectedImage] = useState(null);
 
   const handleImageChange = (event) => {
@@ -233,11 +324,7 @@ function Edittrips() {
     }
   };
 
-  // Handle Edit Button Click
-  const handleEditPolicyClick = () => {
-    fetchAllPolicies();
-    setIsEditingcancellationpolicy(true);
-  };;
+  
 
   // Handle Checkbox Change
   const handleCheckboxChange = (policyId) => {
@@ -266,7 +353,9 @@ function Edittrips() {
     }
   };
 
-
+  const handleEditPolicyClick = () => {
+    navigate(`/edit-cancellation-policy/${trip_id}`);
+  };
 
   const convertToVCF = (data) => {
     let vcfString = "";
@@ -427,6 +516,31 @@ function Edittrips() {
     setEditingDayIndex(index); // Set the day being edited
   };
 
+  const formatDate = (dateString) => {
+    if (!dateString) return ''; // If the dateString is null or empty, return an empty string
+
+    const date = new Date(dateString);
+
+    // Check if the date is invalid
+    if (isNaN(date.getTime())) {
+      return ''; // Return an empty string or handle the error as you prefer
+    }
+
+    const options = { month: 'long', year: 'numeric' };
+    const day = date.getDate();
+
+    // Determine the correct suffix for the day
+    const daySuffix = (day) => {
+      if (day === 1 || day === 21 || day === 31) return 'st';
+      if (day === 2 || day === 22) return 'nd';
+      if (day === 3 || day === 23) return 'rd';
+      return 'th';
+    };
+
+    return `${day}${daySuffix(day)} ${new Intl.DateTimeFormat('en-US', options).format(date)}`;
+  };
+
+
   const handleItineraryImageChange = (event, dayIndex) => {
     const file = event.target.files[0];
     setSelectedItineraryImages((prevImages) => ({
@@ -446,12 +560,11 @@ function Edittrips() {
     });
   };
 
-  // Function to save changes for a specific day
   const handleSaveDay = async (dayIndex) => {
     const item = tripItinerary[dayIndex];
 
     // Ensure trip_id is available (either from state or props)
-    const tripId = item.TRIP_ID;  // Or however you are storing or passing trip_id
+    const tripId = item.TRIP_ID;
 
     if (!item) {
       console.error(`No itinerary found for dayIndex ${dayIndex}`);
@@ -460,8 +573,11 @@ function Edittrips() {
 
     const formData = new FormData();
 
+    // Format the date before sending it to the backend
+    const formattedDate = formatDate(item.DATE); // Use the formatDate function here
+
     // Append itinerary details for the specific day
-    formData.append('DATE', item.DATE);
+    formData.append('DATE', formattedDate); // Send formatted date as "2nd October 2024"
     formData.append('DAY_TITLE', item.DAY_TITLE);
     formData.append('DAY_DESCRIPTION', item.DAY_DESCRIPTION);
     formData.append('TRIP_ID', tripId); // Append trip_id
@@ -486,6 +602,7 @@ function Edittrips() {
       alert('Failed to update trip itinerary day.');
     }
   };
+
 
   if (loading) return <p className="text-center text-lg">Loading...</p>;
   if (error) return <p className="text-center text-lg text-red-500">Error: {error}</p>;
@@ -714,7 +831,7 @@ function Edittrips() {
                           <div className="flex items-center space-x-2 mb-2">
                             <label className="text-gray-600">Date:</label>
                             <input
-                              type="text"
+                              type="date"
                               name="DATE"
                               value={item.DATE || ''}
                               onChange={(e) => handleItineraryChange(index, e)}
@@ -771,13 +888,16 @@ function Edittrips() {
                       ) : (
                         <div className="space-y-2">
                           <p className="font-bold">Date: {item.DATE}</p>
-                          <p className="text-lg font-semibold">{item.DAY_TITLE}</p>
-                          {item.DAY_DESCRIPTION &&
-                            item.DAY_DESCRIPTION.split('.').map((line, lineIndex) => (
-                              <p key={lineIndex}>{line}</p>
+                          {item.DAY_TITLE &&
+                            item.DAY_TITLE.split('-').map((part, titleIndex) => (
+                              <p key={titleIndex} className="text-lg font-semibold">
+                                {part}
+                              </p>
                             ))}
+                          {item.DAY_DESCRIPTION && (
+                            <p>{item.DAY_DESCRIPTION}</p>
+                          )}
 
-                          {/* Show image if present */}
                           {item.DAY_IMG && (
                             <img
                               src={`https://admin.yeahtrips.in${correctedImagePath}`}
@@ -812,192 +932,197 @@ function Edittrips() {
       </div>
       <div>
         <h1 className="text-center font-extrabold max-w-4xl mx-auto mt-8 text-2xl">TEAM</h1>
-        <div className="p-6">
-          {coordinators.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {coordinators.map((coordinator, index) => (
-                <div key={coordinator.cordinator_id} className="bg-gray-100 p-4 rounded-md shadow-sm">
-                  <img
-                    src={`https://admin.yeahtrips.in${coordinator.image}`}
-                    alt={coordinator.name}
-                    className="w-24 h-24 rounded-full mx-auto"
-                  />
-                  {isEditingcordinators === index ? (
-                    <div>
-                      <input
-                        type="file"
-                        name="image"
-                        accept="image/*"
-                        onChange={(e) => handleImageChange(e, coordinator.cordinator_id)}
-                        className="block w-full mt-2 p-2 border border-gray-300 rounded-md"
-                      />
+        <button
+          onClick={toggleAddMemberForm}
+          className="mt-4 bg-blue-500 text-white px-4 py-2 rounded-md shadow-md hover:bg-blue-600"
+        >
+          {showAddMemberForm ? 'Hide Add Member Form' : 'Add Member'}
+        </button>
+        {showAddMemberForm && (
+          <div className="p-6">
+            <h2 className="text-xl font-bold text-center mt-4">Add New Member</h2>
+            <div className="bg-gray-100 p-4 rounded-md shadow-sm mb-6">
+              <select
+                name="name" // Ensure name is correctly set
+                value={newCoordinator.name || ''}
+                onChange={handleNewCoordinatorChange}
+                className="block w-full mt-2 p-2 border border-gray-300 rounded-md"
+              >
+                <option value="" disabled>Select Coordinator</option>
+                {coordinatorOptions.map(coord => (
+                  <option key={coord.id} value={coord.name}>{coord.name}</option> // Use name for display
+                ))}
+              </select>
+              <input
+                type="text"
+                name="role"
+                value={newCoordinator.role || ''}
+                onChange={(e) => handleInputcordinatorChange(e, true)}
+                className="block w-full mt-2 p-2 border border-gray-300 rounded-md"
+                placeholder="Role"
+              />
+              <input
+                type="email"
+                name="email"
+                value={newCoordinator.email || ''} // Auto-populated email
+                readOnly // Keep this read-only
+                className="block w-full mt-2 p-2 border border-gray-300 rounded-md"
+                placeholder="Email"
+              />
 
-                      <input
-                        type="text"
-                        name="name"
-                        value={editedCoordinator.name || ''}
-                        onChange={handleInputcordinatorChange}
-                        className="block w-full mt-2 p-2 border border-gray-300 rounded-md"
-                        placeholder="Name"
-                      />
-                      <input
-                        type="text"
-                        name="role"
-                        value={editedCoordinator.role || ''}
-                        onChange={handleInputcordinatorChange}
-                        className="block w-full mt-2 p-2 border border-gray-300 rounded-md"
-                        placeholder="Role"
-                      />
-                      <input
-                        type="text"
-                        name="email"
-                        value={editedCoordinator.email || ''}
-                        onChange={handleInputcordinatorChange}
-                        className="block w-full mt-2 p-2 border border-gray-300 rounded-md"
-                        placeholder="Email"
-                      />
-                      <input
-                        type="text"
-                        name="link"
-                        value={editedCoordinator.link || ''}
-                        onChange={handleInputcordinatorChange}
-                        className="block w-full mt-2 p-2 border border-gray-300 rounded-md"
-                        placeholder="Link"
-                      />
-                      <select
-                        name="profile_mode"
-                        value={editedCoordinator.profile_mode || ''}
-                        onChange={handleInputcordinatorChange}
-                        className="block w-full mt-2 p-2 border border-gray-300 rounded-md"
-                      >
-                        <option value="" disabled>
-                          Select Profile Mode
-                        </option>
-                        <option value="whatsapp">WhatsApp</option>
-                        <option value="instagram">Instagram</option>
-                      </select>
-                      <button
-                        onClick={() => handleSaveChanges(coordinator.cordinator_id)}
-                        className="block mx-auto mt-4 bg-green-500 text-white px-4 py-2 rounded-md shadow-md hover:bg-green-600"
-                      >
-                        Save
-                      </button>
-                      <button
-                        onClick={() => handleCancelEdit()}
-                        className="block mx-auto mt-2 bg-red-500 text-white px-4 py-2 rounded-md shadow-md hover:bg-red-600"
-                      >
-                        Cancel
-                      </button>
-                    </div>
-                  ) : (
-                    <div>
-                      <h2 className="text-xl font-bold text-center mt-2">{coordinator.name}</h2>
-                      <p className="text-center text-gray-600">{coordinator.role}</p>
-                      {coordinator.profile_mode === 'whatsapp' ? (
-                        <a href={`https://${coordinator.link}`} className="block text-center text-blue-500 mt-2">
-                          WhatsApp
-                        </a>
-                      ) : (
-                        <a href={coordinator.link} className="block text-center text-blue-500 mt-2">
-                          Instagram
-                        </a>
-                      )}
-                      <p className="text-center text-gray-600 mt-2">{coordinator.email}</p>
-
-                      {role !== 'Read-Only' && role !== 'User' && (
-                        <button
-                          onClick={() => handleEditcordinatorClick(index)}
-                          className="block mx-auto mt-4 bg-blue-500 text-white px-4 py-2 rounded-md shadow-md hover:bg-blue-600"
-                        >
-                          Edit
-                        </button>
-                      )}
-                    </div>
-                  )}
-                </div>
-              ))}
+              <button
+                onClick={handleAddCoordinator}
+                className="block mx-auto mt-4 bg-green-500 text-white px-4 py-2 rounded-md shadow-md hover:bg-green-600"
+              >
+                Add Member
+              </button>
             </div>
-          ) : (
-            <p className="text-center text-lg text-gray-500">No coordinators available</p>
-          )}
-        </div>
+          </div>
+        )}
+
+
+
+        {coordinators.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {coordinators.map((coordinator, index) => (
+              <div key={coordinator.cordinator_id} className="bg-gray-100 p-4 rounded-md shadow-sm">
+                <img
+                  src={`https://admin.yeahtrips.in${coordinator.image}`}
+                  alt={coordinator.name}
+                  className="w-24 h-24 rounded-full mx-auto"
+                />
+                {isEditingcordinators === index ? (
+                  <div>
+                    <input
+                      type="file"
+                      name="image"
+                      accept="image/*"
+                      onChange={(e) => handleImageChange(e, coordinator.cordinator_id)}
+                      className="block w-full mt-2 p-2 border border-gray-300 rounded-md"
+                    />
+                    <input
+                      type="text"
+                      name="name"
+                      value={editedCoordinator.name || ''}
+                      onChange={handleInputcordinatorChange}
+                      className="block w-full mt-2 p-2 border border-gray-300 rounded-md"
+                      placeholder="Name"
+                    />
+                    <input
+                      type="text"
+                      name="role"
+                      value={editedCoordinator.role || ''}
+                      onChange={handleInputcordinatorChange}
+                      className="block w-full mt-2 p-2 border border-gray-300 rounded-md"
+                      placeholder="Role"
+                    />
+                    <input
+                      type="email"
+                      name="email"
+                      value={editedCoordinator.email || ''}
+                      onChange={handleInputcordinatorChange}
+                      className="block w-full mt-2 p-2 border border-gray-300 rounded-md"
+                      placeholder="Email"
+                    />
+                    <input
+                      type="text"
+                      name="link"
+                      value={editedCoordinator.link || ''}
+                      onChange={handleInputcordinatorChange}
+                      className="block w-full mt-2 p-2 border border-gray-300 rounded-md"
+                      placeholder="Link"
+                    />
+                    <select
+                      name="profile_mode"
+                      value={editedCoordinator.profile_mode || ''}
+                      onChange={handleInputcordinatorChange}
+                      className="block w-full mt-2 p-2 border border-gray-300 rounded-md"
+                    >
+                      <option value="" disabled>Select Profile Mode</option>
+                      <option value="whatsapp">WhatsApp</option>
+                      <option value="instagram">Instagram</option>
+                    </select>
+                    <button
+                      onClick={() => handleSaveChanges(coordinator.cordinator_id)}
+                      className="block mx-auto mt-4 bg-green-500 text-white px-4 py-2 rounded-md shadow-md hover:bg-green-600"
+                    >
+                      Save
+                    </button>
+                    <button
+                      onClick={handleCancelEdit}
+                      className="block mx-auto mt-2 bg-red-500 text-white px-4 py-2 rounded-md shadow-md hover:bg-red-600"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                ) : (
+                  <div>
+                    <h2 className="text-xl font-bold text-center mt-2">{coordinator.name}</h2>
+                    <p className="text-center text-gray-600">{coordinator.role}</p>
+                    {coordinator.profile_mode === 'whatsapp' ? (
+                      <a href={`https://${coordinator.link}`} className="block text-center text-blue-500 mt-2">
+                        WhatsApp
+                      </a>
+                    ) : (
+                      <a href={coordinator.link} className="block text-center text-blue-500 mt-2">
+                        Instagram
+                      </a>
+                    )}
+                    <p className="text-center text-gray-600 mt-2">{coordinator.email}</p>
+
+                    {/* Edit button only visible for certain roles */}
+                    {role !== 'Read-Only' && role !== 'User' && (
+                      <button
+                        onClick={() => handleEditcordinatorClick(index)}
+                        className="block mx-auto mt-4 bg-blue-500 text-white px-4 py-2 rounded-md shadow-md hover:bg-blue-600"
+                      >
+                        Edit
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-center text-lg text-gray-500">No coordinators available.</p>
+        )}
       </div>
+
 
 
       <div>
-        <h1 className="text-center font-extrabold max-w-4xl mx-auto mt-8 text-2xl">Cancellation Policy</h1>
-        <div className="p-6">
-          {cancellationPolicies.length > 0 ? (
-            <div className="grid grid-cols-1 gap-6">
-              <div className="bg-gray-100 p-4 rounded-md shadow-sm">
-                <h2 className="text-xl font-bold">{cancellationPolicies[0].policy_name}</h2>
-                <p><strong>Fee Type:</strong> {cancellationPolicies[0].fee_type}</p>
+      <h1 className="text-center font-extrabold max-w-4xl mx-auto mt-8 text-2xl">Cancellation Policy</h1>
+      <div className="p-6">
+        {cancellationPolicies.length > 0 ? (
+          <div className="grid grid-cols-1 gap-6">
+            <div className="bg-gray-100 p-4 rounded-md shadow-sm">
+              <h2 className="text-xl font-bold">{cancellationPolicies[0].policy_name}</h2>
+              <p><strong>Fee Type:</strong> {cancellationPolicies[0].fee_type}</p>
 
-                {cancellationPolicies.map((policy, index) => (
-                  <div key={index} className="mt-2">
-                    <p><strong>Start Day:</strong> {policy.start_date}</p>
-                    <p><strong>End Day:</strong> {policy.end_date}</p>
-                    <p><strong>Fee:</strong> {policy.fee}%</p>
-                  </div>
-                ))}
+              {cancellationPolicies.map((policy, index) => (
+                <div key={index} className="mt-2">
+                  <p><strong>Start Day:</strong> {policy.start_date}</p>
+                  <p><strong>End Day:</strong> {policy.end_date}</p>
+                  <p><strong>Fee:</strong> {policy.fee}%</p>
+                </div>
+              ))}
 
-                {role !== 'Read-Only' && role !== 'User' && (
-                  <button
-                    onClick={handleEditPolicyClick}
-                    className="block mx-auto mt-4 bg-blue-500 text-white px-4 py-2 rounded-md shadow-md hover:bg-blue-600"
-                  >
-                    Edit Policy
-                  </button>
-                )}
-              </div>
+              {role !== 'Read-Only' && role !== 'User' && (
+                <button
+                  onClick={handleEditPolicyClick}
+                  className="block mx-auto mt-4 bg-blue-500 text-white px-4 py-2 rounded-md shadow-md hover:bg-blue-600"
+                >
+                  Edit Policy
+                </button>
+              )}
             </div>
-          ) : (
-            <p className="text-center text-lg text-gray-500">No cancellation policies available</p>
-          )}
-
-          {isEditingcancellationpolicy && (
-            <div className="mt-6">
-              <h3 className="text-lg font-semibold">Select a Policy to Include:</h3>
-              <div className="flex flex-col">
-                {allPolicies.map(policy => (
-                  <div key={policy.id} className="border p-4 mb-2 rounded-md">
-                    <h4 className="font-bold">{policy.policyName}</h4>
-                    <p><strong>Fee Type:</strong> {policy.feeType}</p>
-                    <div className="flex items-center mt-2">
-                      <input
-                        type="checkbox"
-                        checked={selectedPolicyId === policy.id}
-                        onChange={() => handleCheckboxChange(policy.id)} // Handle checkbox change
-                        className="mr-2"
-                      />
-                      <span>Available Dates:</span>
-                    </div>
-                    <div className="ml-6"> {/* Indent for date ranges */}
-                      {policy.dateRanges.map((range, index) => (
-                        <div key={index} className="flex mt-1">
-                          <span>
-                            Start Date: {range.startDate},
-                            End Date: {range.endDate},
-                            Fee: {range.fee}%
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-              <button
-                onClick={handleSavePolicies}
-                className="block mt-4 bg-green-500 text-white px-4 py-2 rounded-md shadow-md hover:bg-green-600"
-              >
-                Save Policy
-              </button>
-            </div>
-          )}
-
-
-        </div>
+          </div>
+        ) : (
+          <p className="text-center text-lg text-gray-500">No cancellation policies available</p>
+        )}
       </div>
+    </div>
 
       <div>
         <div>

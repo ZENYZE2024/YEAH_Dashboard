@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 import AdminNavbar from '../Dashboardnavbar/Dashboardnavbar';
+
 function Adduser() {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
@@ -8,7 +9,8 @@ function Adduser() {
     const [name, setName] = useState('');
     const [image, setImage] = useState(null);
     const [link, setLink] = useState('');
-    const [profileMode, setProfileMode] = useState(''); 
+    const [profileMode, setProfileMode] = useState('');
+    const [position, setPosition] = useState(''); // New state for position
     const [message, setMessage] = useState('');
 
     const handleSubmit = async (e) => {
@@ -21,8 +23,9 @@ function Adduser() {
         formData.append('name', name);
         formData.append('link', link);
         formData.append('profile_mode', profileMode);
+        formData.append('position', position); // Add position to form data
         if (image) {
-            formData.append('image', image); 
+            formData.append('image', image);
         }
 
         try {
@@ -47,10 +50,9 @@ function Adduser() {
     };
 
     return (
-
         <div>
             <div>
-                 <AdminNavbar/>
+                <AdminNavbar />
             </div>
             <div className="flex items-center justify-center min-h-screen bg-gray-100">
                 <div className="w-full max-w-md p-8 bg-white shadow-lg rounded-lg">
@@ -103,6 +105,21 @@ function Adduser() {
                             </select>
                         </div>
                         <div className="form-group">
+                            <label htmlFor="position" className="block text-sm font-medium text-gray-700">Position:</label> {/* New dropdown for position */}
+                            <select
+                                id="position"
+                                value={position}
+                                onChange={(e) => setPosition(e.target.value)}
+                                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                            >
+                                <option value="">Select Position</option>
+                                <option value="Founder">Founder</option>
+                                <option value="Co-Founder">Co-Founder</option>
+                                <option value="Team Member">Team Member</option>
+                                <option value="Coordinator">Coordinator</option>
+                            </select>
+                        </div>
+                        <div className="form-group">
                             <label htmlFor="link" className="block text-sm font-medium text-gray-700">Link:</label>
                             <input
                                 type="text"
@@ -146,7 +163,6 @@ function Adduser() {
                 </div>
             </div>
         </div>
-
     );
 }
 

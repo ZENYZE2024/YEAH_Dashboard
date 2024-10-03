@@ -36,14 +36,14 @@ const storage = multer.diskStorage({
 const upload = multer({
     storage: storage,
     fileFilter: (req, file, cb) => {
-        if (file.mimetype === 'image/jpeg' || file.mimetype === 'image/png') {
+        const fileTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/svg+xml']; // Add SVG, JPG
+        if (fileTypes.includes(file.mimetype)) {
             cb(null, true);
         } else {
             cb(new Error('Unsupported file type'), false);
         }
     }
 });
-
 
 
 const generateSlug = (text) => {
@@ -200,15 +200,14 @@ app.post('/generatenewpassword', async (req, res) => {
         res.status(200).json({ success: true, message: 'Password updated successfully.' });
     } catch (error) {
         console.error('Error updating password:', error);
-        res.status(500).json({success: false, message: 'Error processing request. Please try again later.' });
+        res.status(500).json({ success: false, message: 'Error processing request. Please try again later.' });
     } finally {
         if (connection) connection.release();
     }
 });
 
 app.post('/adduser', upload.single('image'), async (req, res) => {
-    const { email, password, role, name, link, profile_mode } = req.body;
-    // Include the upload directory in the path
+    const { email, password, role, name, link, profile_mode, position } = req.body;
     const profileImage = req.file ? `\\uploads\\${req.file.filename}` : null; // Adjust path based on your setup
     console.log(req.body);
 
@@ -235,8 +234,8 @@ app.post('/adduser', upload.single('image'), async (req, res) => {
         }
 
         const [result] = await connection.execute(
-            'INSERT INTO tripusers (email, password, role, profile_image, name, link, profile_mode) VALUES (?, ?, ?, ?, ?, ?, ?)',
-            [email, hashedPassword, role, profileImage, name, link, profile_mode]
+            'INSERT INTO tripusers (email, password, role, profile_image, name, link, profile_mode, position) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+            [email, hashedPassword, role, profileImage, name, link, profile_mode, position]
         );
 
         await connection.release();
@@ -247,6 +246,7 @@ app.post('/adduser', upload.single('image'), async (req, res) => {
         res.status(500).json({ message: 'Error adding user' });
     }
 });
+
 
 
 
@@ -281,7 +281,7 @@ app.post('/forgotthepassword', async (req, res) => {
         const otp = Math.floor(1000 + Math.random() * 9000).toString(); // Random 4-digit OTP
 
         // Store OTP in the format: { email: email, otp: otp }
-        otps[email] = { email: email, otp: otp }; 
+        otps[email] = { email: email, otp: otp };
 
         sendOTPByEmail(email, otp);
         res.status(200).json({ message: 'OTP sent to your email address.' });
@@ -498,7 +498,7 @@ app.get('/tripitenary/:trip_id', async (req, res) => {
 app.get('/cancellationpolicies/:trip_id', async (req, res) => {
     const trip_id = req.params.trip_id;
     console.log(trip_id);
-    
+
     if (!trip_id) {
         return res.status(400).json({ error: 'trip_id is required' });
     }
@@ -884,33 +884,33 @@ app.post('/addtrips', upload.any(), async (req, res) => {
                     }
                 }
             });
-            
+
             console.log('Processed Cancellation Policies:', JSON.stringify(processedPolicies, null, 2));
-            
+
             // Update the SQL query to only include policy_id and trip_id
             const insertCancellationPolicySQL = `INSERT INTO cancellationpolicies (
                 policy_id, trip_id
             ) VALUES (?, ?)`;
-            
+
             for (const policy of processedPolicies) {
                 // Here you may want to extract policy_id from the policy object
                 const policyId = policy.id; // Assuming policy_id exists in your policy object
-            
+
                 // Assuming trip_id is defined elsewhere in your code
                 const tripId = trip_id; // Ensure trip_id is accessible
-            
+
                 // Prepare the values for insertion
                 const cancellationPolicyValues = [
                     policyId,  // The policy_id from the policy object
                     tripId     // The trip_id
                 ];
-            
+
                 // Insert the record into the database
                 await connection.query(insertCancellationPolicySQL, cancellationPolicyValues);
             }
-            
+
             console.log('Inserted cancellation policies');
-            
+
 
             await connection.commit();
             res.json({ message: 'Trip, images, itinerary data, and policies inserted successfully!' });
@@ -1422,7 +1422,7 @@ app.put('/update-cancellation-policy/:tripId', async (req, res) => {
     const tripId = req.params.tripId; // This is the trip_id you want to update the policy_id for
     const { policy_id } = req.body; // Only policy_id is received from the request body
 
-    console.log("body", req.body); 
+    console.log("body", req.body);
 
     // Validate request body
     if (!policy_id || !tripId) {
@@ -1432,7 +1432,7 @@ app.put('/update-cancellation-policy/:tripId', async (req, res) => {
     let connection;
     try {
         connection = await pool.getConnection();
-        
+
         // Check if the tripId exists before attempting to update
         const [tripCheck] = await connection.query('SELECT * FROM cancellationpolicies WHERE trip_id = ?', [tripId]);
         if (tripCheck.length === 0) {
@@ -1463,9 +1463,9 @@ app.put('/update-cancellation-policy/:tripId', async (req, res) => {
 
 app.get('/getwhatsapp-links', async (req, res) => {
     try {
-        const connection = await pool.getConnection(); 
+        const connection = await pool.getConnection();
         const [results] = await connection.query('SELECT * FROM communitywhatsapp'); // Use the appropriate table name
-        connection.release(); 
+        connection.release();
         res.json(results);
         console.log(results)
     } catch (error) {
@@ -1886,12 +1886,12 @@ app.get('/gettheeditpickuppoints', async (req, res) => {
         connection.release();
 
         if (rows.length > 0) {
-            const googlemapLink = rows[0].googlemap; 
+            const googlemapLink = rows[0].googlemap;
             rows.forEach((item, index) => {
                 if (index !== 0) {
-                    delete item.googlemap; 
+                    delete item.googlemap;
                 } else {
-                    item.googlemap = googlemapLink; 
+                    item.googlemap = googlemapLink;
                 }
             });
         }
@@ -1909,57 +1909,57 @@ app.get('/gettheeditpickuppoints', async (req, res) => {
 
 app.put('/updatethePickupPoints', async (req, res) => {
     const { trip_id, pickupPoints } = req.body;
-  
+
     console.log(req.body); // For debugging
-  
+
     if (!trip_id || !Array.isArray(pickupPoints)) {
-      return res.status(400).json({ error: 'Invalid input' });
+        return res.status(400).json({ error: 'Invalid input' });
     }
-  
+
     const connection = await pool.getConnection();
     try {
-      await connection.beginTransaction();
-  
-      // Update pickuppoints table
-      const updatePickupPointsPromises = pickupPoints.map(async (point) => {
-        const { id, pickuppoint, time } = point;
-        const sql = `
+        await connection.beginTransaction();
+
+        // Update pickuppoints table
+        const updatePickupPointsPromises = pickupPoints.map(async (point) => {
+            const { id, pickuppoint, time } = point;
+            const sql = `
           UPDATE pickuppoints 
           SET pickuppoint = ?, time = ?
           WHERE id = ? AND trip_id = ?
         `;
-        const [result] = await connection.execute(sql, [pickuppoint, time, id, trip_id]);
-        return result;
-      });
-  
-      // Wait for all pickup point updates to finish
-      await Promise.all(updatePickupPointsPromises);
-  
-      // Update the googlemap field in the tripdata table (use trip_id to update googlemap)
-      const googlemap = pickupPoints[0]?.googlemap; // Assuming googlemap is provided in the first pickup point
-      if (googlemap) {
-        const updateGoogleMapSql = `
+            const [result] = await connection.execute(sql, [pickuppoint, time, id, trip_id]);
+            return result;
+        });
+
+        // Wait for all pickup point updates to finish
+        await Promise.all(updatePickupPointsPromises);
+
+        // Update the googlemap field in the tripdata table (use trip_id to update googlemap)
+        const googlemap = pickupPoints[0]?.googlemap; // Assuming googlemap is provided in the first pickup point
+        if (googlemap) {
+            const updateGoogleMapSql = `
           UPDATE tripdata 
           SET googlemap = ?
           WHERE trip_id = ?
         `;
-        await connection.execute(updateGoogleMapSql, [googlemap, trip_id]);
-      }
-  
-      // Commit the transaction after all updates
-      await connection.commit();
-      res.status(200).json({ message: 'Pickup points and Google Map link updated successfully!' });
-    } catch (error) {
-      console.error('Error updating pickup points and Google Map link:', error);
-      await connection.rollback();
-      res.status(500).json({ error: 'Failed to update pickup points and Google Map link' });
-    } finally {
-      connection.release();
-    }
-  });
-  
+            await connection.execute(updateGoogleMapSql, [googlemap, trip_id]);
+        }
 
-  app.get('/getuser/:id', async (req, res) => {
+        // Commit the transaction after all updates
+        await connection.commit();
+        res.status(200).json({ message: 'Pickup points and Google Map link updated successfully!' });
+    } catch (error) {
+        console.error('Error updating pickup points and Google Map link:', error);
+        await connection.rollback();
+        res.status(500).json({ error: 'Failed to update pickup points and Google Map link' });
+    } finally {
+        connection.release();
+    }
+});
+
+
+app.get('/getuser/:id', async (req, res) => {
     const userId = req.params.id; // Get the user ID from the request parameters
 
     try {
@@ -2024,6 +2024,229 @@ app.get('/getcancellationpolicy/:policyId', async (req, res) => {
         res.status(500).json({ error: 'Internal Server Error' });
     } finally {
         if (connection) connection.release();
+    }
+});
+
+app.post('/coordinatorstrip', async (req, res) => {
+    const { name, email, role, tripId } = req.body;
+
+    if (!name || !email || !role || !tripId) {
+        return res.status(400).json({ message: 'All fields are required' });
+    }
+
+    let connection;
+    try {
+        connection = await pool.getConnection(); // Get a connection from the pool
+
+        // Step 1: Fetch coordinator details from tripusers table
+        const userQuery = 'SELECT id AS coordinator_id, profile_image AS image, link, profile_mode FROM tripusers WHERE email = ?';
+        const [userResult] = await connection.query(userQuery, [email]);
+
+        if (userResult.length === 0) {
+            return res.status(404).json({ message: 'Coordinator not found with the provided email' });
+        }
+
+        const { coordinator_id, image, link, profile_mode } = userResult[0]; // Get the first user detail
+
+        // Step 2: Insert the new coordinator into tripcoordinators table
+        const sql = 'INSERT INTO tripcoordinators (name, email, role, trip_id, cordinator_id, image, link, profile_mode) VALUES (?, ?, ?, ?, ?, ?, ?, ?)';
+
+        // Execute the insert query
+        const [result] = await connection.query(sql, [name, email, role, tripId, coordinator_id, image, link, profile_mode]);
+
+        res.status(201).json({ message: 'Coordinator added successfully', id: result.insertId });
+    } catch (err) {
+        console.error('Error inserting coordinator:', err);
+        res.status(500).json({ message: 'Failed to add coordinator' });
+    } finally {
+        if (connection) connection.release(); // Release the connection back to the pool
+    }
+});
+
+
+app.post('/blog', upload.single('image'), async (req, res) => { 
+    const connection = await pool.getConnection();
+    try {
+        const { title, slug, content } = req.body; 
+
+        let imagePath = ''; 
+
+        if (req.file) {
+            imagePath = `\\uploads\\${req.file.filename}`; 
+        }
+
+        const sql = 'INSERT INTO blogs (image, title, slug, content) VALUES (?, ?, ?, ?)';
+        await connection.query(sql, [imagePath, title, slug, content]);
+
+        res.status(201).json({ message: 'Blog post created successfully!' });
+    } catch (error) {
+        console.error('Error inserting blog post:', error);
+        res.status(500).json({ error: 'Error creating blog post. Please try again.' });
+    } finally {
+        connection.release(); 
+    }
+});
+
+
+app.get('/communitygroupmembers', async (req, res) => {
+    const connection = await pool.getConnection();
+    try {
+        const sql = 'SELECT * FROM communitymembers';
+
+        const [results] = await connection.query(sql);
+
+        res.status(200).json(results);
+    } catch (error) {
+        console.error('Error fetching community group members:', error);
+        res.status(500).json({ error: 'Error fetching community group members. Please try again.' });
+    } finally {
+        connection.release();
+    }
+});
+
+app.post('/perfectmoments', upload.single('image'), async (req, res) => {
+    const connection = await pool.getConnection();
+
+    try {
+        let imagePath = '';
+
+        if (req.file) {
+            imagePath = `\\uploads\\${req.file.filename}`;
+        }
+
+        const [result] = await connection.query('INSERT INTO perfectmomments (image) VALUES (?)', [imagePath]);
+
+        res.status(200).json({ message: 'Image uploaded successfully!', id: result.insertId });
+    } catch (error) {
+        console.error('Error uploading image:', error);
+        res.status(500).json({ message: 'Error uploading image. Please try again.' });
+    } finally {
+        connection.release();
+    }
+});
+
+app.get('/getperfectmoments', async (req, res) => {
+    const connection = await pool.getConnection();
+    try {
+        const sql = 'SELECT * FROM  perfectmomments';
+        const [results] = await connection.query(sql);
+        res.status(200).json(results);
+
+    } catch (error) {
+        console.error('Error fetching Perfect moments:', error);
+        res.status(500).json({ error: 'Error fetching perfect moments. Please try again.' });
+    } finally {
+        connection.release();
+    }
+});
+
+
+
+app.delete('/perfectmoments/:id', async (req, res) => {
+    const imageId = req.params.id;
+    console.log('Deleting image with ID:', imageId);
+
+    let connection = null;
+    try {
+        connection = await pool.getConnection();
+
+        const sql = 'DELETE FROM perfectmomments WHERE id = ?';
+
+        const [result] = await connection.execute(sql, [imageId]);
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ message: 'Image not found' });
+        }
+
+        res.status(200).json({ message: 'Image deleted successfully' });
+    } catch (error) {
+        console.error('Error deleting image:', error);
+        res.status(500).json({ message: 'Error deleting image' });
+    } finally {
+        if (connection) {
+            connection.release();
+        }
+    }
+});
+
+app.get('/getblogs', async (req, res) => {
+    const connection = await pool.getConnection();
+    try {
+        const sql = 'SELECT * FROM  blogs';
+        const [results] = await connection.query(sql);
+        res.status(200).json(results);
+
+    } catch (error) {
+        console.error('Error fetching Blogs:', error);
+        res.status(500).json({ error: 'Error fetching Blogs. Please try again.' });
+    } finally {
+        connection.release();
+    }
+});
+
+app.delete('/deleteblog/:id', async (req, res) => {
+    const { id } = req.params;
+
+    let connection;
+    try {
+        connection = await pool.getConnection();
+
+        const query = 'DELETE FROM blogs WHERE id = ?';
+
+        const [results] = await connection.query(query, [id]);
+
+        if (results.affectedRows === 0) {
+            return res.status(404).json({ message: 'Blog post not found' });
+        }
+
+        res.status(200).json({ message: 'Blog post deleted successfully' });
+    } catch (err) {
+        console.error('Error deleting blog post:', err);
+        return res.status(500).json({ message: 'Error deleting blog post' });
+    } finally {
+        if (connection) {
+            connection.release();
+        }
+    }
+});
+
+app.put('/updateblog/:id', upload.single('image'), async (req, res) => {
+    const blogId = req.params.id; 
+    const { title, slug, content, image } = req.body; 
+
+    console.log(req.body); 
+
+    try {
+        const connection = await pool.getConnection();
+
+        const [currentBlog] = await connection.query('SELECT * FROM blogs WHERE id = ?', [blogId]);
+        
+        if (!currentBlog) {
+            return res.status(404).json({ error: 'Blog not found.' });
+        }
+
+        const updateQuery = `
+            UPDATE blogs 
+            SET title = ?, content = ?, image = ?, slug = ? 
+            WHERE id = ?
+        `;
+
+        let imagePath;
+
+        if (req.file) {
+            imagePath = `\\uploads\\${req.file.filename}`; 
+        } else {
+            imagePath =image; 
+        }
+
+        await connection.query(updateQuery, [title, content, imagePath, slug, blogId]);
+
+        connection.release();
+
+        res.status(200).json({ message: 'Blog updated successfully!' });
+    } catch (error) {
+        console.error('Error updating blog:', error);
+        res.status(500).json({ error: 'An error occurred while updating the blog.' });
     }
 });
 
