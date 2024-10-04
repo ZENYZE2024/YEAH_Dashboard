@@ -1,16 +1,27 @@
 import React from "react";
+import { useNavigate } from "react-router-dom";
 import logo from './images/logo.svg';
 
 function Navbar() {
-    // Function to navigate back
+    const navigate = useNavigate(); 
+
     const handleBack = () => {
         window.history.back();
     };
 
+    const handleLogoClick = () => {
+        navigate('/dashboard');
+    };
+
     return (
         <div className="flex items-center justify-between bg-gray-100 p-4 shadow-md">
-            <div className="flex items-center">
-                <img src={logo} alt="Logo" className="h-10 w-auto" />
+            <div className="flex items-center"  onClick={handleLogoClick} >
+                <img 
+                    src={logo} 
+                    alt="Logo" 
+                    className="h-10 w-auto cursor-pointer" 
+                   
+                />
             </div>
             <button 
                 onClick={handleBack} 
@@ -23,3 +34,4 @@ function Navbar() {
 }
 
 export default Navbar;
+

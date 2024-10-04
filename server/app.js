@@ -1462,31 +1462,111 @@ app.put('/update-cancellation-policy/:tripId', async (req, res) => {
 
 
 app.get('/getwhatsapp-links', async (req, res) => {
+    let connection;
+
     try {
-        const connection = await pool.getConnection();
-        const [results] = await connection.query('SELECT * FROM communitywhatsapp'); // Use the appropriate table name
-        connection.release();
+        connection = await pool.getConnection();
+
+        const [results] = await connection.query('SELECT * FROM whatsapp_links');
+
         res.json(results);
-        console.log(results)
+
+        console.log(results);
+
     } catch (error) {
         console.error('Error fetching data: ', error);
+
         res.status(500).json({ error: 'Database query failed' });
+    } finally {
+        if (connection) connection.release();
+    }
+});
+
+
+app.post('/whatsapp-links', async (req, res) => {
+    const { link, name } = req.body;
+
+    if (!link || !name) {
+        return res.status(400).send('Link and name are required');
+    }
+
+    let connection;
+
+    try {
+        connection = await pool.getConnection();
+
+        const query = 'INSERT INTO whatsapp_links (link, name) VALUES (?, ?)';
+        const [result] = await connection.execute(query, [link, name]);
+
+        res.json({ id: result.insertId, link, name });
+
+    } catch (error) {
+        console.error('Error inserting WhatsApp link:', error);
+        res.status(500).send('Server Error');
+    } finally {
+        if (connection) connection.release();
+    }
+});
+
+app.put('/updatewhatsapp-links/:id', async (req, res) => {
+    const { id } = req.params; 
+    const { link, name } = req.body; 
+    console.log("edit",req.body)
+
+    if (!link || !name) {
+        return res.status(400).send('Link and name are required');
+    }
+
+    try {
+        const connection = await pool.getConnection(); 
+
+        try {
+            const result = await connection.query(
+                'UPDATE whatsapp_links SET link = ?, name = ? WHERE id = ?',
+                [link, name, id]
+            );
+
+            if (result.affectedRows === 0) {
+                return res.status(404).send('Link not found'); 
+            }
+
+            res.status(200).send({ id, link, name }); 
+        } catch (queryErr) {
+            console.error('Error executing UPDATE query:', queryErr);
+            res.status(500).send('Error updating link'); 
+        } finally {
+            connection.release(); 
+        }
+    } catch (connErr) {
+        console.error('Error establishing database connection:', connErr);
+        res.status(500).send('Database connection error'); 
     }
 });
 
 
 app.delete('/whatsapp-links/:id', async (req, res) => {
-    const { id } = req.params;
-    const connection = await pool.getConnection();
+    const { id } = req.params; 
 
     try {
-        await connection.query('DELETE FROM communitywhatsapp WHERE id = ?', [id]);
-        res.status(200).send('Link deleted successfully');
-    } catch (err) {
-        console.error('Error deleting link:', err);
-        res.status(500).send('Error deleting link');
-    } finally {
-        connection.release();
+        const connection = await pool.getConnection();
+
+        try {
+            const result = await connection.query('DELETE FROM whatsapp_links WHERE id = ?', [id]);
+            
+            if (result.affectedRows === 0) {
+                return res.status(404).send('Link not found'); 
+            }
+            
+            res.status(200).send('Link deleted successfully'); 
+        } catch (queryErr) {
+            console.error('Error executing DELETE query:', queryErr);
+            res.status(500).send('Error deleting link'); 
+        } finally {
+            connection.release(); 
+        }
+    } catch (connErr) {
+        console.error('Error establishing database connection:', connErr);
+        res.status(500).send('Database connection error'); 
     }
 });
 
@@ -2104,6 +2184,24 @@ app.get('/communitygroupmembers', async (req, res) => {
     }
 });
 
+
+app.get('/letsgoforracampcommunitygroupmembers', async (req, res) => {
+    const connection = await pool.getConnection();
+    try {
+        const sql = 'SELECT * FROM letsgoforacampcommunity';
+
+        const [results] = await connection.query(sql);
+
+        res.status(200).json(results);
+    } catch (error) {
+        console.error('Error fetching community group members:', error);
+        res.status(500).json({ error: 'Error fetching community group members. Please try again.' });
+    } finally {
+        connection.release();
+    }
+});
+
+
 app.post('/perfectmoments', upload.single('image'), async (req, res) => {
     const connection = await pool.getConnection();
 
@@ -2250,7 +2348,35 @@ app.put('/updateblog/:id', upload.single('image'), async (req, res) => {
     }
 });
 
+app.delete('/deletecoordinator/:cordinator_id', async (req, res) => {
+    const cordinatorId = req.params.cordinator_id;
+    
+    let connection;
+    try {
+      connection = await pool.getConnection();
+  
+      const deleteQuery = 'DELETE FROM tripcoordinators WHERE cordinator_id = ?';
+  
+      const [result] = await connection.execute(deleteQuery, [cordinatorId]);
+  
+      if (result.affectedRows === 0) {
+        return res.status(404).json({ message: 'Coordinator not found' });
+      }
+  
+      res.status(200).json({ message: 'Coordinator deleted successfully' });
+      
+    } catch (err) {
+      console.error('Error deleting coordinator:', err);
+      res.status(500).json({ message: 'Error deleting coordinator' });
+      
+    } finally {
+      if (connection) {
+        connection.release();
+      }
+    }
+  });
 
+ 
 
 app.use(express.static(path.join(__dirname, 'public')));
 

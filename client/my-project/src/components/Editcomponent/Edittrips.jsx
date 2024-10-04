@@ -24,7 +24,7 @@ function Edittrips() {
   const [editedPolicy, setEditedPolicy] = useState(null);
   const [cancellationPolicies, setCancellationPolicies] = useState([]);
 
-  const navigate =useNavigate();
+  const navigate = useNavigate();
   useEffect(() => {
     const fetchData = async () => {
 
@@ -300,6 +300,26 @@ function Edittrips() {
     }
   };
 
+  const handleDeleteCoordinator = async (cordinatorId) => {
+    if (window.confirm("Are you sure you want to delete this coordinator?")) {
+      try {
+        const response = await fetch(`https://admin.yeahtrips.in/deletecoordinator/${cordinatorId}`, {
+          method: 'DELETE',
+        });
+
+        if (response.ok) {
+          setCoordinators((prev) => prev.filter(coordinator => coordinator.cordinator_id !== cordinatorId));
+          alert('Coordinator deleted successfully.');
+        } else {
+          alert('Failed to delete the coordinator.');
+        }
+      } catch (error) {
+        console.error("Error deleting coordinator:", error);
+        alert('An error occurred while deleting the coordinator.');
+      }
+    }
+  };
+
 
   const [selectedImage, setSelectedImage] = useState(null);
 
@@ -324,7 +344,7 @@ function Edittrips() {
     }
   };
 
-  
+
 
   // Handle Checkbox Change
   const handleCheckboxChange = (policyId) => {
@@ -625,6 +645,19 @@ function Edittrips() {
   };
 
 
+  // Helper function to convert '12th February 2024' to '2024-02-12'
+  function parseDate(dateString) {
+    const dateParts = dateString.match(/(\d{1,2})(?:st|nd|rd|th)?\s(\w+)\s(\d{4})/);
+    if (!dateParts) return '';
+
+    const day = dateParts[1].padStart(2, '0'); // Ensure two digits for day
+    const month = new Date(`${dateParts[2]} 1`).getMonth() + 1; // Get the month index from the string (e.g., February -> 2)
+    const year = dateParts[3];
+
+    return `${year}-${month.toString().padStart(2, '0')}-${day}`; // Format as YYYY-MM-DD
+  }
+
+
   return (
     <div>
       <div>
@@ -677,7 +710,9 @@ function Edittrips() {
                 {renderDetail("Trip Code", "trip_code", tripDetails, isEditing, handleInputChange)}
                 {renderDetail("Slug", "slug", tripDetails, isEditing, handleInputChange)}
                 {renderDetail("Cost", "cost", tripDetails, isEditing, handleInputChange)}
-                {renderDetail("Seats Available", "seats", tripDetails, isEditing, handleInputChange)}
+                {renderDetail("Seats Available", "seats", tripDetails)}
+                {renderDetail("Total Seats", "totalseats", tripDetails, isEditing, handleInputChange)}
+
                 {renderDetail("Start Date", "trip_start_date", tripDetails, isEditing, handleInputChange)}
                 {renderDetail("End Date", "end_date", tripDetails, isEditing, handleInputChange)}
                 {renderDetail("Start Point", "trip_start_point", tripDetails, isEditing, handleInputChange)}
@@ -833,11 +868,10 @@ function Edittrips() {
                             <input
                               type="date"
                               name="DATE"
-                              value={item.DATE || ''}
+                              value={item.DATE ? parseDate(item.DATE) : ''}
                               onChange={(e) => handleItineraryChange(index, e)}
                               className="border rounded w-32 p-2"
                             />
-
                             {correctedImagePath && (
                               <img
                                 src={`https://admin.yeahtrips.in${correctedImagePath}`}
@@ -889,14 +923,10 @@ function Edittrips() {
                         <div className="space-y-2">
                           <p className="font-bold">Date: {item.DATE}</p>
                           {item.DAY_TITLE &&
-                            item.DAY_TITLE.split('-').map((part, titleIndex) => (
-                              <p key={titleIndex} className="text-lg font-semibold">
-                                {part}
-                              </p>
-                            ))}
-                          {item.DAY_DESCRIPTION && (
-                            <p>{item.DAY_DESCRIPTION}</p>
-                          )}
+                            <p>{item.DAY_TITLE}</p>
+
+                          }
+
 
                           {item.DAY_IMG && (
                             <img
@@ -905,6 +935,17 @@ function Edittrips() {
                               style={{ width: '50vw', height: '30vh', objectFit: 'cover' }}
                             />
                           )}
+
+                          {item.DAY_DESCRIPTION && (
+                            <>
+                              {item.DAY_DESCRIPTION.split('.').map((sentence, index) => (
+                                // Trim to remove extra spaces and check if the sentence is not empty
+                                sentence.trim() && <p key={index}>{sentence.trim()}.</p>
+                              ))}
+                            </>
+                          )}
+
+
 
                           {/* Edit button */}
                           {role !== 'Read-Only' && role !== 'User' && (
@@ -938,19 +979,20 @@ function Edittrips() {
         >
           {showAddMemberForm ? 'Hide Add Member Form' : 'Add Member'}
         </button>
+
         {showAddMemberForm && (
           <div className="p-6">
             <h2 className="text-xl font-bold text-center mt-4">Add New Member</h2>
             <div className="bg-gray-100 p-4 rounded-md shadow-sm mb-6">
               <select
-                name="name" // Ensure name is correctly set
+                name="name"
                 value={newCoordinator.name || ''}
                 onChange={handleNewCoordinatorChange}
                 className="block w-full mt-2 p-2 border border-gray-300 rounded-md"
               >
                 <option value="" disabled>Select Coordinator</option>
                 {coordinatorOptions.map(coord => (
-                  <option key={coord.id} value={coord.name}>{coord.name}</option> // Use name for display
+                  <option key={coord.id} value={coord.name}>{coord.name}</option>
                 ))}
               </select>
               <input
@@ -964,8 +1006,8 @@ function Edittrips() {
               <input
                 type="email"
                 name="email"
-                value={newCoordinator.email || ''} // Auto-populated email
-                readOnly // Keep this read-only
+                value={newCoordinator.email || ''}
+                readOnly
                 className="block w-full mt-2 p-2 border border-gray-300 rounded-md"
                 placeholder="Email"
               />
@@ -979,8 +1021,6 @@ function Edittrips() {
             </div>
           </div>
         )}
-
-
 
         {coordinators.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -1070,14 +1110,22 @@ function Edittrips() {
                     )}
                     <p className="text-center text-gray-600 mt-2">{coordinator.email}</p>
 
-                    {/* Edit button only visible for certain roles */}
+                    {/* Edit button */}
                     {role !== 'Read-Only' && role !== 'User' && (
-                      <button
-                        onClick={() => handleEditcordinatorClick(index)}
-                        className="block mx-auto mt-4 bg-blue-500 text-white px-4 py-2 rounded-md shadow-md hover:bg-blue-600"
-                      >
-                        Edit
-                      </button>
+                      <>
+                        <button
+                          onClick={() => handleEditcordinatorClick(index)}
+                          className="block mx-auto mt-4 bg-blue-500 text-white px-4 py-2 rounded-md shadow-md hover:bg-blue-600"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => handleDeleteCoordinator(coordinator.cordinator_id)}
+                          className="block mx-auto mt-2 bg-red-500 text-white px-4 py-2 rounded-md shadow-md hover:bg-red-600"
+                        >
+                          Delete
+                        </button>
+                      </>
                     )}
                   </div>
                 )}
@@ -1091,38 +1139,39 @@ function Edittrips() {
 
 
 
+
       <div>
-      <h1 className="text-center font-extrabold max-w-4xl mx-auto mt-8 text-2xl">Cancellation Policy</h1>
-      <div className="p-6">
-        {cancellationPolicies.length > 0 ? (
-          <div className="grid grid-cols-1 gap-6">
-            <div className="bg-gray-100 p-4 rounded-md shadow-sm">
-              <h2 className="text-xl font-bold">{cancellationPolicies[0].policy_name}</h2>
-              <p><strong>Fee Type:</strong> {cancellationPolicies[0].fee_type}</p>
+        <h1 className="text-center font-extrabold max-w-4xl mx-auto mt-8 text-2xl">Cancellation Policy</h1>
+        <div className="p-6">
+          {cancellationPolicies.length > 0 ? (
+            <div className="grid grid-cols-1 gap-6">
+              <div className="bg-gray-100 p-4 rounded-md shadow-sm">
+                <h2 className="text-xl font-bold">{cancellationPolicies[0].policy_name}</h2>
+                <p><strong>Fee Type:</strong> {cancellationPolicies[0].fee_type}</p>
 
-              {cancellationPolicies.map((policy, index) => (
-                <div key={index} className="mt-2">
-                  <p><strong>Start Day:</strong> {policy.start_date}</p>
-                  <p><strong>End Day:</strong> {policy.end_date}</p>
-                  <p><strong>Fee:</strong> {policy.fee}%</p>
-                </div>
-              ))}
+                {cancellationPolicies.map((policy, index) => (
+                  <div key={index} className="mt-2">
+                    <p><strong>Start Day:</strong> {policy.start_date}</p>
+                    <p><strong>End Day:</strong> {policy.end_date}</p>
+                    <p><strong>Fee:</strong> {policy.fee}%</p>
+                  </div>
+                ))}
 
-              {role !== 'Read-Only' && role !== 'User' && (
-                <button
-                  onClick={handleEditPolicyClick}
-                  className="block mx-auto mt-4 bg-blue-500 text-white px-4 py-2 rounded-md shadow-md hover:bg-blue-600"
-                >
-                  Edit Policy
-                </button>
-              )}
+                {role !== 'Read-Only' && role !== 'User' && (
+                  <button
+                    onClick={handleEditPolicyClick}
+                    className="block mx-auto mt-4 bg-blue-500 text-white px-4 py-2 rounded-md shadow-md hover:bg-blue-600"
+                  >
+                    Edit Policy
+                  </button>
+                )}
+              </div>
             </div>
-          </div>
-        ) : (
-          <p className="text-center text-lg text-gray-500">No cancellation policies available</p>
-        )}
+          ) : (
+            <p className="text-center text-lg text-gray-500">No cancellation policies available</p>
+          )}
+        </div>
       </div>
-    </div>
 
       <div>
         <div>

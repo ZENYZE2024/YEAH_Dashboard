@@ -74,6 +74,8 @@ function Trips() {
 
   const upcomingTrips = filteredData.filter((trip) => parseDate(trip.trip_start_date) >= currentDate);
 
+  const Bookedseats = (datas.totalseatss)-(datas.seats)
+
   if (loading) return <p className="text-center text-lg text-gray-600">Loading...</p>;
   if (error) return <p className="text-center text-lg text-red-600">Error: {error}</p>;
 
@@ -113,7 +115,8 @@ function Trips() {
               const totalSeats = item.totalseats || 0;
               const seatsLeft = item.seats;
               const percentageLeft = (seatsLeft / totalSeats) * 100;
-
+              const Bookedseats = (totalSeats)-(seatsLeft)
+              
               let bgColor = 'bg-white';
               let seatsBgColor = 'bg-gray-300';
               let borderColor = 'border-gray-200';
@@ -155,6 +158,10 @@ function Trips() {
                       <div className={`flex items-center gap-2 ${seatsBgColor} p-3 rounded-md`}>
                         <span className="font-semibold text-gray-800">Seats Available:</span>
                         <span>{item.seats}</span>
+                      </div>
+                      <div className={`flex items-center gap-2 ${seatsBgColor} p-3 rounded-md`}>
+                        <span className="font-semibold text-gray-800">Seats Booked:</span>
+                        <span>{Bookedseats}</span>
                       </div>
                       <div className="flex items-center gap-2">
                         <span className="font-semibold text-gray-800">Created By:</span>
