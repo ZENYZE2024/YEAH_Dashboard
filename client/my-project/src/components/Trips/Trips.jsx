@@ -44,7 +44,7 @@ function Trips() {
     setView(view === 'published' ? 'trash' : 'published');
   };
 
-  
+
 
   // Helper function to parse dates
   const parseDate = (dateString) => {
@@ -74,7 +74,7 @@ function Trips() {
 
   const upcomingTrips = filteredData.filter((trip) => parseDate(trip.trip_start_date) >= currentDate);
 
-  const Bookedseats = (datas.totalseatss)-(datas.seats)
+  const Bookedseats = (datas.totalseatss) - (datas.seats)
 
   if (loading) return <p className="text-center text-lg text-gray-600">Loading...</p>;
   if (error) return <p className="text-center text-lg text-red-600">Error: {error}</p>;
@@ -97,7 +97,7 @@ function Trips() {
             className="border border-gray-300 rounded-lg py-2 px-4 w-full max-w-xs focus:outline-none focus:ring-2 focus:ring-blue-300 transition duration-300"
           />
         </div>
-       
+
         <button
           className="bg-gradient-to-r from-purple-400 to-purple-600 text-white py-2 px-4 rounded-lg shadow-lg hover:from-purple-500 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-300 transition duration-300 text-base font-medium"
           onClick={() => navigate('/pasttrips')}
@@ -108,15 +108,17 @@ function Trips() {
 
       {/* Upcoming Trips */}
       <div className="bg-white w-full max-w-screen-xl p-6 rounded-lg shadow-lg mb-8">
-        <h2 className="text-2xl font-bold text-gray-900 mb-4">Upcoming Trips</h2>
+        <h2 className="text-2xl font-bold text-gray-900 mb-4">
+          {view === 'published' ? 'Upcoming Trips' : 'Trash'}
+        </h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-8">
           {upcomingTrips.length > 0 ? (
             upcomingTrips.map((item) => {
               const totalSeats = item.totalseats || 0;
               const seatsLeft = item.seats;
               const percentageLeft = (seatsLeft / totalSeats) * 100;
-              const Bookedseats = (totalSeats)-(seatsLeft)
-              
+              const Bookedseats = (totalSeats) - (seatsLeft)
+
               let bgColor = 'bg-white';
               let seatsBgColor = 'bg-gray-300';
               let borderColor = 'border-gray-200';
@@ -191,8 +193,9 @@ function Trips() {
               );
             })
           ) : (
-            <p className="text-center text-lg text-gray-600">No upcoming trips available.</p>
-          )}
+            <p className="text-center text-lg text-gray-600">
+              {view === 'trash' ? 'No items in trash.' : 'No upcoming trips available.'}
+            </p>)}
         </div>
       </div>
     </div>

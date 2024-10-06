@@ -543,6 +543,7 @@ app.get('/cancellationpolicies/:trip_id', async (req, res) => {
 
 app.put('/updatetrip', upload.single('trip_image'), async (req, res) => {
     const tripDetails = req.body;
+    console.log(req.body)
     const trip_id = tripDetails.trip_id;
     const { trip_start_date, end_date, ...otherDetails } = tripDetails;
 
@@ -1509,16 +1510,16 @@ app.post('/whatsapp-links', async (req, res) => {
 });
 
 app.put('/updatewhatsapp-links/:id', async (req, res) => {
-    const { id } = req.params; 
-    const { link, name } = req.body; 
-    console.log("edit",req.body)
+    const { id } = req.params;
+    const { link, name } = req.body;
+    console.log("edit", req.body)
 
     if (!link || !name) {
         return res.status(400).send('Link and name are required');
     }
 
     try {
-        const connection = await pool.getConnection(); 
+        const connection = await pool.getConnection();
 
         try {
             const result = await connection.query(
@@ -1527,46 +1528,46 @@ app.put('/updatewhatsapp-links/:id', async (req, res) => {
             );
 
             if (result.affectedRows === 0) {
-                return res.status(404).send('Link not found'); 
+                return res.status(404).send('Link not found');
             }
 
-            res.status(200).send({ id, link, name }); 
+            res.status(200).send({ id, link, name });
         } catch (queryErr) {
             console.error('Error executing UPDATE query:', queryErr);
-            res.status(500).send('Error updating link'); 
+            res.status(500).send('Error updating link');
         } finally {
-            connection.release(); 
+            connection.release();
         }
     } catch (connErr) {
         console.error('Error establishing database connection:', connErr);
-        res.status(500).send('Database connection error'); 
+        res.status(500).send('Database connection error');
     }
 });
 
 
 app.delete('/whatsapp-links/:id', async (req, res) => {
-    const { id } = req.params; 
+    const { id } = req.params;
 
     try {
         const connection = await pool.getConnection();
 
         try {
             const result = await connection.query('DELETE FROM whatsapp_links WHERE id = ?', [id]);
-            
+
             if (result.affectedRows === 0) {
-                return res.status(404).send('Link not found'); 
+                return res.status(404).send('Link not found');
             }
-            
-            res.status(200).send('Link deleted successfully'); 
+
+            res.status(200).send('Link deleted successfully');
         } catch (queryErr) {
             console.error('Error executing DELETE query:', queryErr);
-            res.status(500).send('Error deleting link'); 
+            res.status(500).send('Error deleting link');
         } finally {
-            connection.release(); 
+            connection.release();
         }
     } catch (connErr) {
         console.error('Error establishing database connection:', connErr);
-        res.status(500).send('Database connection error'); 
+        res.status(500).send('Database connection error');
     }
 });
 
@@ -2144,15 +2145,15 @@ app.post('/coordinatorstrip', async (req, res) => {
 });
 
 
-app.post('/blog', upload.single('image'), async (req, res) => { 
+app.post('/blog', upload.single('image'), async (req, res) => {
     const connection = await pool.getConnection();
     try {
-        const { title, slug, content } = req.body; 
+        const { title, slug, content } = req.body;
 
-        let imagePath = ''; 
+        let imagePath = '';
 
         if (req.file) {
-            imagePath = `\\uploads\\${req.file.filename}`; 
+            imagePath = `\\uploads\\${req.file.filename}`;
         }
 
         const sql = 'INSERT INTO blogs (image, title, slug, content) VALUES (?, ?, ?, ?)';
@@ -2163,7 +2164,7 @@ app.post('/blog', upload.single('image'), async (req, res) => {
         console.error('Error inserting blog post:', error);
         res.status(500).json({ error: 'Error creating blog post. Please try again.' });
     } finally {
-        connection.release(); 
+        connection.release();
     }
 });
 
@@ -2309,16 +2310,16 @@ app.delete('/deleteblog/:id', async (req, res) => {
 });
 
 app.put('/updateblog/:id', upload.single('image'), async (req, res) => {
-    const blogId = req.params.id; 
-    const { title, slug, content, image } = req.body; 
+    const blogId = req.params.id;
+    const { title, slug, content, image } = req.body;
 
-    console.log(req.body); 
+    console.log(req.body);
 
     try {
         const connection = await pool.getConnection();
 
         const [currentBlog] = await connection.query('SELECT * FROM blogs WHERE id = ?', [blogId]);
-        
+
         if (!currentBlog) {
             return res.status(404).json({ error: 'Blog not found.' });
         }
@@ -2332,9 +2333,9 @@ app.put('/updateblog/:id', upload.single('image'), async (req, res) => {
         let imagePath;
 
         if (req.file) {
-            imagePath = `\\uploads\\${req.file.filename}`; 
+            imagePath = `\\uploads\\${req.file.filename}`;
         } else {
-            imagePath =image; 
+            imagePath = image;
         }
 
         await connection.query(updateQuery, [title, content, imagePath, slug, blogId]);
@@ -2350,33 +2351,100 @@ app.put('/updateblog/:id', upload.single('image'), async (req, res) => {
 
 app.delete('/deletecoordinator/:cordinator_id', async (req, res) => {
     const cordinatorId = req.params.cordinator_id;
-    
+
     let connection;
     try {
-      connection = await pool.getConnection();
-  
-      const deleteQuery = 'DELETE FROM tripcoordinators WHERE cordinator_id = ?';
-  
-      const [result] = await connection.execute(deleteQuery, [cordinatorId]);
-  
-      if (result.affectedRows === 0) {
-        return res.status(404).json({ message: 'Coordinator not found' });
-      }
-  
-      res.status(200).json({ message: 'Coordinator deleted successfully' });
-      
-    } catch (err) {
-      console.error('Error deleting coordinator:', err);
-      res.status(500).json({ message: 'Error deleting coordinator' });
-      
-    } finally {
-      if (connection) {
-        connection.release();
-      }
-    }
-  });
+        connection = await pool.getConnection();
 
- 
+        const deleteQuery = 'DELETE FROM tripcoordinators WHERE cordinator_id = ?';
+
+        const [result] = await connection.execute(deleteQuery, [cordinatorId]);
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ message: 'Coordinator not found' });
+        }
+
+        res.status(200).json({ message: 'Coordinator deleted successfully' });
+
+    } catch (err) {
+        console.error('Error deleting coordinator:', err);
+        res.status(500).json({ message: 'Error deleting coordinator' });
+
+    } finally {
+        if (connection) {
+            connection.release();
+        }
+    }
+});
+
+app.get('/waitinglistmembers/:trip_id', async (req, res) => {
+    const { trip_id } = req.params; // Get trip_id from the URL parameters
+
+    let connection;
+    try {
+        // Get a connection from the pool
+        connection = await pool.getConnection();
+
+        // Query to fetch waiting list members from the waitinglist table
+        const query = 'SELECT * FROM waitinglist WHERE trip_id = ?';
+
+        // Execute the query
+        const [result] = await connection.query(query, [trip_id]);
+
+        // If no results are found, send an empty array instead of a 404
+        res.status(200).json(result.length > 0 ? result : []); // Send result if found, else empty array
+
+    } catch (error) {
+        console.error('Error fetching waiting list members:', error);
+        res.status(500).json({ message: 'Server error. Failed to fetch waiting list members.' });
+    } finally {
+        // Release the connection back to the pool
+        if (connection) connection.release();
+    }
+});
+
+app.post('/approve-cancellation', async (req, res) => {
+    const { booking_id } = req.body;
+
+    try {
+        const connection = await pool.getConnection();
+
+        const [bookingRows] = await connection.query(
+            'SELECT seats, trip_id FROM bookings WHERE booking_id = ?',
+            [booking_id]
+        );
+
+        if (bookingRows.length === 0) {
+            connection.release();
+            return res.status(404).json({ message: 'Booking not found' });
+        }
+
+        const { seats, trip_id } = bookingRows[0];
+
+        const updateQuery = 'UPDATE cancellations SET status = ? WHERE booking_id = ?';
+        const [results] = await connection.query(updateQuery, ['Approved', booking_id]);
+
+        await connection.query('DELETE FROM bookings WHERE booking_id = ?', [booking_id]);
+        await connection.query('DELETE FROM members WHERE booking_id = ?', [booking_id]);
+
+        await connection.query(
+            'UPDATE tripdata SET seats = seats + ? WHERE trip_id = ?',
+            [seats, trip_id]
+        );
+
+        connection.release();
+
+        if (results.affectedRows === 0) {
+            return res.status(404).json({ message: 'Booking not found' });
+        }
+
+        res.status(200).json({ message: 'Cancellation approved successfully' });
+    } catch (error) {
+        console.error('Error updating cancellation status:', error);
+
+        res.status(500).json({ message: 'Error updating cancellation status' });
+    }
+});
 
 app.use(express.static(path.join(__dirname, 'public')));
 

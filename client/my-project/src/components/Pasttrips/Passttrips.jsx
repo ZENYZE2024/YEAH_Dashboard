@@ -9,7 +9,7 @@ function Pasttrips() {
     const [error, setError] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [currentPage, setCurrentPage] = useState(1); // Add state for current page
-    const tripsPerPage = 8; // Define trips per page
+    const tripsPerPage = 15; // Define trips per page
     const navigate = useNavigate();
 
     useEffect(() => {

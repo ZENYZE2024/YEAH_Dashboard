@@ -23,7 +23,7 @@ function Edittrips() {
   const [coordinators, setCoordinators] = useState([]);
   const [editedPolicy, setEditedPolicy] = useState(null);
   const [cancellationPolicies, setCancellationPolicies] = useState([]);
-
+  const [waitinglist, setWaitinglist] = useState([])
   const navigate = useNavigate();
   useEffect(() => {
     const fetchData = async () => {
@@ -33,14 +33,16 @@ function Edittrips() {
       setRole(storedRole);
 
       try {
-        const [detailsResponse, itineraryResponse, bookingsResponse, cancellationsresponse, coordinatorsResponse, cancellationPoliciesResponse] = await Promise.all([
+        const [detailsResponse, itineraryResponse, bookingsResponse, cancellationsresponse, coordinatorsResponse, cancellationPoliciesResponse, waitinglistresponse] = await Promise.all([
           axios.get(`https://admin.yeahtrips.in/editdetailstrips/${trip_id}`),
 
           axios.get(`https://admin.yeahtrips.in/tripitenary/${trip_id}`),
           axios.get(`https://admin.yeahtrips.in/getbookingdetails/${trip_id}`),
           axios.get(`https://admin.yeahtrips.in/cancellations/${trip_id}`),
           axios.get(`https://admin.yeahtrips.in/getcoordinatordetails/${trip_id}`),
-          axios.get(`https://admin.yeahtrips.in/cancellationpolicies/${trip_id}`)
+          axios.get(`https://admin.yeahtrips.in/cancellationpolicies/${trip_id}`),
+          axios.get(`https://admin.yeahtrips.in/waitinglistmembers/${trip_id}`)
+
         ]);
 
         setTripDetails(detailsResponse.data[0]);
@@ -49,13 +51,13 @@ function Edittrips() {
         setCancellations(Array.isArray(cancellationsresponse.data) ? cancellationsresponse.data : []);
         setCoordinators(Array.isArray(coordinatorsResponse.data) ? coordinatorsResponse.data : []);
         setCancellationPolicies(Array.isArray(cancellationPoliciesResponse.data) ? cancellationPoliciesResponse.data : []);
-
+        setWaitinglist(Array.isArray(waitinglistresponse.data) ? waitinglistresponse.data : [])
         console.log("Trip Details:", detailsResponse.data);
         console.log("Trip Itinerary:", itineraryResponse.data);
         console.log("Bookings:", bookingsResponse.data);
-        console.log("cancellation", cancellationPoliciesResponse.data);
+        console.log("cancellation", cancellationsresponse.data);
         console.log("Coordinators:", coordinatorsResponse.data);
-
+        console.log("waitinglist", waitinglistresponse.data)
       } catch (error) {
         console.error("Error fetching trip details or itinerary:", error);
         setError(error.response?.data || error.message || "Error fetching data");
@@ -489,6 +491,7 @@ function Edittrips() {
       formData.append("trip_name", tripDetails.trip_name);
       formData.append("trip_description", tripDetails.trip_description);
       formData.append("trip_code", tripDetails.trip_code);
+      formData.append("totalseats", tripDetails.totalseats);
       formData.append("slug", tripDetails.slug);
       formData.append("cost", tripDetails.cost);
       formData.append("seats", tripDetails.seats);
@@ -560,7 +563,6 @@ function Edittrips() {
     return `${day}${daySuffix(day)} ${new Intl.DateTimeFormat('en-US', options).format(date)}`;
   };
 
-
   const handleItineraryImageChange = (event, dayIndex) => {
     const file = event.target.files[0];
     setSelectedItineraryImages((prevImages) => ({
@@ -569,16 +571,22 @@ function Edittrips() {
     }));
   };
 
-  // Function to handle changes in itinerary inputs
   const handleItineraryChange = (index, event) => {
     const { name, value } = event.target;
-    // Update the itinerary item with new values
+
     setTripItinerary((prevItinerary) => {
       const updatedItinerary = [...prevItinerary];
-      updatedItinerary[index] = { ...updatedItinerary[index], [name]: value };
+
+      // Ensure all fields, including DATE, are retained when updating any field
+      updatedItinerary[index] = {
+        ...updatedItinerary[index], // Keep the other fields, including DATE
+        [name]: value,              // Only update the specific field that changed
+      };
+
       return updatedItinerary;
     });
   };
+
 
   const handleSaveDay = async (dayIndex) => {
     const item = tripItinerary[dayIndex];
@@ -593,11 +601,18 @@ function Edittrips() {
 
     const formData = new FormData();
 
-    // Format the date before sending it to the backend
-    const formattedDate = formatDate(item.DATE); // Use the formatDate function here
 
-    // Append itinerary details for the specific day
-    formData.append('DATE', formattedDate); // Send formatted date as "2nd October 2024"
+    let formattedDate = formatDate(item.DATE); // Declare formattedDate using let
+
+    // If the formatted date is empty, fallback to the original DATE from tripItinerary
+    if (formattedDate === '') {
+      formattedDate = tripItinerary[dayIndex].DATE; // Reassign formattedDate
+    }
+
+
+
+
+    formData.append('DATE', formattedDate);
     formData.append('DAY_TITLE', item.DAY_TITLE);
     formData.append('DAY_DESCRIPTION', item.DAY_DESCRIPTION);
     formData.append('TRIP_ID', tripId); // Append trip_id
@@ -616,7 +631,7 @@ function Edittrips() {
       });
       alert('Trip itinerary day updated successfully!');
       setEditingDayIndex(null);  // Reset the editing state
-      window.location.reload();
+      window.location.reload();  // Reload the page to reflect changes
     } catch (error) {
       console.error("Error updating trip itinerary day:", error);
       alert('Failed to update trip itinerary day.');
@@ -647,16 +662,46 @@ function Edittrips() {
 
   // Helper function to convert '12th February 2024' to '2024-02-12'
   function parseDate(dateString) {
-    const dateParts = dateString.match(/(\d{1,2})(?:st|nd|rd|th)?\s(\w+)\s(\d{4})/);
-    if (!dateParts) return '';
+    const dateParts = dateString.split(' ');
+    const day = dateParts[0].replace(/\D/g, ''); // Extract numerical part of day
+    const month = dateParts[1];
+    const year = dateParts[2];
 
-    const day = dateParts[1].padStart(2, '0'); // Ensure two digits for day
-    const month = new Date(`${dateParts[2]} 1`).getMonth() + 1; // Get the month index from the string (e.g., February -> 2)
-    const year = dateParts[3];
-
-    return `${year}-${month.toString().padStart(2, '0')}-${day}`; // Format as YYYY-MM-DD
+    const monthIndex = getMonthIndex(month);
+    return `${year}-${monthIndex < 10 ? '0' + monthIndex : monthIndex}-${day.padStart(2, '0')}`;
   }
 
+  const handleApprove = (bookingId) => {
+    console.log(`Approval requested for booking ID: ${bookingId}`);
+
+    axios.post('https://admin.yeahtrips.in/approve-cancellation', { booking_id: bookingId })
+      .then(response => {
+        console.log('Cancellation approved:', response.data);
+        window.location.reload();
+      })
+      .catch(error => {
+        console.error('Error approving cancellation:', error);
+      });
+  };
+
+  const seatsCount = {};
+
+  cancellations.forEach(item => {
+    if (!seatsCount[item.booking_id]) {
+      seatsCount[item.booking_id] = { count: 0, seats: item.seats };
+    }
+    seatsCount[item.booking_id].count += 1;
+  });
+
+  const bookingCounts = {};
+
+  bookings.forEach(booking => {
+    if (bookingCounts[booking.booking_id]) {
+      bookingCounts[booking.booking_id] += 1;
+    } else {
+      bookingCounts[booking.booking_id] = 1;
+    }
+  });
 
   return (
     <div>
@@ -868,10 +913,16 @@ function Edittrips() {
                             <input
                               type="date"
                               name="DATE"
-                              value={item.DATE ? parseDate(item.DATE) : ''}
-                              onChange={(e) => handleItineraryChange(index, e)}
-                              className="border rounded w-32 p-2"
+                              value={formatDateForInput(item.DATE)} 
+                              onChange={(e) => {
+                                const selectedDate = new Date(e.target.value);
+                                const formattedDate = formatDateToDisplay(selectedDate); 
+                                handleItineraryChange(index, { target: { name: "DATE", value: formattedDate } }); 
+                              }}
+                              className="border p-2"
                             />
+
+
                             {correctedImagePath && (
                               <img
                                 src={`https://admin.yeahtrips.in${correctedImagePath}`}
@@ -1200,6 +1251,7 @@ function Edittrips() {
                   <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Booking ID</th>
                   <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Order ID</th>
                   <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Full Name</th>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Seats</th>
                   <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Age</th>
                   <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
                   <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Phone Number</th>
@@ -1212,22 +1264,27 @@ function Edittrips() {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {bookings.map((booking, index) => (
-                  <tr key={booking.trip_id}>
-                    <td className="px-4 py-2 whitespace-nowrap">{booking.booking_id}</td>
-                    <td className="px-4 py-2 whitespace-nowrap">{booking.order_id}</td>
-                    <td className="px-4 py-2 whitespace-normal break-words">{booking.fullname}</td> {/* Enable text wrapping */}
-                    <td className="px-4 py-2 whitespace-nowrap">{booking.age}</td>
-                    <td className="px-4 py-2 whitespace-normal break-words">{booking.email}</td> {/* Enable text wrapping */}
-                    <td className="px-4 py-2 whitespace-nowrap">{booking.phonenumber}</td>
-                    <td className="px-4 py-2 whitespace-nowrap">{booking.whatsappnumber}</td>
-                    <td className="px-4 py-2 whitespace-nowrap">{booking.member_state}</td>
-                    <td className="px-4 py-2 whitespace-nowrap">{booking.city}</td>
-                    <td className="px-4 py-2 whitespace-nowrap">{booking.bookingDetails?.amount_paid}</td>
-                    <td className="px-4 py-2 whitespace-nowrap">{booking.bookingDetails?.couponcode}</td>
-                    <td className="px-4 py-2 whitespace-nowrap">{booking.bookingDetails?.discount_amount}</td>
-                  </tr>
-                ))}
+                {bookings
+                  .filter((booking, index, self) =>
+                    self.findIndex(b => b.booking_id === booking.booking_id) === index
+                  )
+                  .map((booking, index) => (
+                    <tr key={booking.trip_id}>
+                      <td className="px-4 py-2 whitespace-nowrap">{booking.booking_id}</td>
+                      <td className="px-4 py-2 whitespace-nowrap">{booking.order_id}</td>
+                      <td className="px-4 py-2 whitespace-normal break-words">{booking.fullname}</td>
+                      <td className="px-4 py-2 whitespace-nowrap">{bookingCounts[booking.booking_id]}</td>
+                      <td className="px-4 py-2 whitespace-nowrap">{booking.age}</td>
+                      <td className="px-4 py-2 whitespace-normal break-words">{booking.email}</td>
+                      <td className="px-4 py-2 whitespace-nowrap">{booking.phonenumber}</td>
+                      <td className="px-4 py-2 whitespace-nowrap">{booking.whatsappnumber}</td>
+                      <td className="px-4 py-2 whitespace-nowrap">{booking.member_state}</td>
+                      <td className="px-4 py-2 whitespace-nowrap">{booking.city}</td>
+                      <td className="px-4 py-2 whitespace-nowrap">{booking.bookingDetails?.amount_paid}</td>
+                      <td className="px-4 py-2 whitespace-nowrap">{booking.bookingDetails?.couponcode}</td>
+                      <td className="px-4 py-2 whitespace-nowrap">{booking.bookingDetails?.discount_amount}</td>
+                    </tr>
+                  ))}
               </tbody>
             </table>
           </div>
@@ -1251,35 +1308,90 @@ function Edittrips() {
 
         </div>
         <div className="p-6">
-          <table className="overflow-x-auto">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Booking ID</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Order ID</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Full Name</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Phonenumber</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Reason</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Payment Id</th>
+          <div className="overflow-x-auto">
+            <table className="table-auto min-w-full divide-y divide-gray-200 border border-gray-300">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Booking ID</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Order ID</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Full Name</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Phonenumber</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Reason</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Payment Id</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Seats</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {cancellations
+                  // Filter out duplicate booking_ids and only keep the first occurrence
+                  .filter((item, index, self) => self.findIndex(t => t.booking_id === item.booking_id) === index)
+                  .map((item) => (
+                    <tr key={item.trip_id}>
+                      <td className="px-6 py-4 whitespace-nowrap">{item.booking_id}</td>
+                      <td className="px-6 py-4 whitespace-nowrap">{item.order_id}</td>
+                      <td className="px-6 py-4 whitespace-nowrap">{item.fullname}</td>
+                      <td className="px-6 py-4 whitespace-nowrap">{item.phonenumber}</td>
+                      <td className="px-6 py-4 whitespace-nowrap">{item.email}</td>
+                      <td className="px-6 py-4 whitespace-nowrap">{item.reasons}</td>
+                      <td className="px-6 py-4 whitespace-nowrap">{item.amount}</td>
+                      <td className="px-6 py-4 whitespace-nowrap">{item.payment_id}</td>
+                      <td className="px-6 py-4 whitespace-nowrap">{seatsCount[item.booking_id] ? seatsCount[item.booking_id].count : 0}</td>                      <td className="px-6 py-4 whitespace-nowrap">
+                        {item.status === 'Approved' ? (
+                          <span className="bg-green-500 text-white px-3 py-1 rounded">
+                            Approved
+                          </span>
+                        ) : (
+                          <button
+                            className="bg-red-500 text-white px-3 py-1 rounded"
+                            onClick={() => handleApprove(item.booking_id)}
+                          >
+                            Approve
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+              </tbody>
+            </table>
+          </div>
+
+        </div>
+
+
+
+        <h2 className="text-2xl font-bold mb-4">Waiting List Members</h2>
+        {waitinglist.length > 0 ? (
+          <table className="min-w-full bg-white border border-gray-300">
+            <thead>
+              <tr className="bg-gray-200">
+                <th className="border px-4 py-2">ID</th>
+                <th className="border px-4 py-2">Email</th>
+                <th className="border px-4 py-2">Phone Number</th>
+                <th className="border px-4 py-2">WhatsApp Number</th>
+                <th className="border px-4 py-2">Seats</th>
+                <th className="border px-4 py-2">Created At</th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {cancellations.map((item) => (
-                <tr key={item.trip_id}>
-                  <td className="px-6 py-4 whitespace-nowrap">{item.booking_id}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">{item.order_id}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">{item.fullname}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">{item.phonenumber}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">{item.email}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">{item.reasons}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">{item.amount}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">{item.payment_id}</td>
+            <tbody>
+              {waitinglist.map(member => (
+                <tr key={member.id}>
+                  <td className="border px-4 py-2">{member.id}</td>
+                  <td className="border px-4 py-2">{member.email}</td>
+                  <td className="border px-4 py-2">{member.phonenumber}</td>
+                  <td className="border px-4 py-2">{member.whatsappnumber}</td>
+                  <td className="border px-4 py-2">{member.seats}</td>
+                  <td className="border px-4 py-2">{new Date(member.created_at).toLocaleString()}</td>
                 </tr>
               ))}
             </tbody>
           </table>
-        </div>
+        ) : (
+          <p className="text-gray-500">No waiting list members found.</p>
+        )}
+
       </div>
 
     </div>
@@ -1356,7 +1468,7 @@ const renderDetail = (label, name, tripDetails, isEditing, handleInputChange) =>
             type="date"
             id={name}
             name={name}
-            value={formatDateForInput(value)} // Use helper function to format date for input
+            value={formatDateForInput(value)}
             onChange={(e) => {
               const selectedDate = new Date(e.target.value);
               const formattedDate = formatDateToDisplay(selectedDate);
