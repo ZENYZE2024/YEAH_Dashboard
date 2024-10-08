@@ -702,7 +702,8 @@ function Edittrips() {
       bookingCounts[booking.booking_id] = 1;
     }
   });
-
+  console.log("tripDetails:", tripDetails);
+  const seatsavailable = tripDetails.totalseats - tripDetails.seats;
   return (
     <div>
       <div>
@@ -735,7 +736,7 @@ function Edittrips() {
                   id="trip_image"
                   name="trip_image"
                   accept="image/*"
-                  onChange={handleFileChange} // Add a file change handler
+                  onChange={handleFileChange}
                   className="border rounded w-full p-2"
                 />
               </div>
@@ -755,9 +756,11 @@ function Edittrips() {
                 {renderDetail("Trip Code", "trip_code", tripDetails, isEditing, handleInputChange)}
                 {renderDetail("Slug", "slug", tripDetails, isEditing, handleInputChange)}
                 {renderDetail("Cost", "cost", tripDetails, isEditing, handleInputChange)}
-                {renderDetail("Seats Available", "seats", tripDetails)}
+                {renderDetail("Seats Booked", "seats", tripDetails)}
                 {renderDetail("Total Seats", "totalseats", tripDetails, isEditing, handleInputChange)}
-
+                <div className="border border-gray-300 rounded p-2 bg-gray-100">
+                  {"Seats Available: " + seatsavailable}
+                </div>
                 {renderDetail("Start Date", "trip_start_date", tripDetails, isEditing, handleInputChange)}
                 {renderDetail("End Date", "end_date", tripDetails, isEditing, handleInputChange)}
                 {renderDetail("Start Point", "trip_start_point", tripDetails, isEditing, handleInputChange)}
@@ -913,11 +916,11 @@ function Edittrips() {
                             <input
                               type="date"
                               name="DATE"
-                              value={formatDateForInput(item.DATE)} 
+                              value={formatDateForInput(item.DATE)}
                               onChange={(e) => {
                                 const selectedDate = new Date(e.target.value);
-                                const formattedDate = formatDateToDisplay(selectedDate); 
-                                handleItineraryChange(index, { target: { name: "DATE", value: formattedDate } }); 
+                                const formattedDate = formatDateToDisplay(selectedDate);
+                                handleItineraryChange(index, { target: { name: "DATE", value: formattedDate } });
                               }}
                               className="border p-2"
                             />

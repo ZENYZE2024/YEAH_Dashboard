@@ -106,7 +106,6 @@ function Trips() {
         </button>
       </div>
 
-      {/* Upcoming Trips */}
       <div className="bg-white w-full max-w-screen-xl p-6 rounded-lg shadow-lg mb-8">
         <h2 className="text-2xl font-bold text-gray-900 mb-4">
           {view === 'published' ? 'Upcoming Trips' : 'Trash'}
@@ -115,9 +114,9 @@ function Trips() {
           {upcomingTrips.length > 0 ? (
             upcomingTrips.map((item) => {
               const totalSeats = item.totalseats || 0;
-              const seatsLeft = item.seats;
-              const percentageLeft = (seatsLeft / totalSeats) * 100;
-              const Bookedseats = (totalSeats) - (seatsLeft)
+              const seatsbooked = item.seats;
+              const seatsleft = (totalSeats) - (seatsbooked)
+              const percentageLeft = (seatsleft / totalSeats) * 100;
 
               let bgColor = 'bg-white';
               let seatsBgColor = 'bg-gray-300';
@@ -159,11 +158,11 @@ function Trips() {
                       </div>
                       <div className={`flex items-center gap-2 ${seatsBgColor} p-3 rounded-md`}>
                         <span className="font-semibold text-gray-800">Seats Available:</span>
-                        <span>{item.seats}</span>
+                        <span>{seatsleft}</span>
                       </div>
                       <div className={`flex items-center gap-2 ${seatsBgColor} p-3 rounded-md`}>
                         <span className="font-semibold text-gray-800">Seats Booked:</span>
-                        <span>{Bookedseats}</span>
+                        <span>{seatsbooked}</span>
                       </div>
                       <div className="flex items-center gap-2">
                         <span className="font-semibold text-gray-800">Created By:</span>

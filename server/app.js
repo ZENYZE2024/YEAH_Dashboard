@@ -805,13 +805,13 @@ app.post('/addtrips', upload.any(), async (req, res) => {
             const createdAt = new Date();
 
             const insertTripSQL = `INSERT INTO tripdata (
-                trip_name, trip_code, slug, cost, seats, totalseats, trip_start_date, end_date,
+                trip_name, trip_code, slug, cost,  totalseats, trip_start_date, end_date,
                 trip_start_point, trip_end_point, destination, trip_duration,
                 traveller_type, inclusion, exclusion, points_to_note, trip_type, trip_description, googlemap, whatsapplink,
                 created_by, created_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?,  ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
             const tripValues = [
-                trip_name, trip_code, slug, cost, seats, totalseats, trip_start_date, end_date,
+                trip_name, trip_code, slug, cost,  totalseats, trip_start_date, end_date,
                 trip_start_point, trip_end_point, destination, trip_duration,
                 traveller_type, inclusion, exclusion, points_to_note, trip_type, trip_description, googlemap, whatsapplink,
                 userName, createdAt
@@ -2428,7 +2428,7 @@ app.post('/approve-cancellation', async (req, res) => {
         await connection.query('DELETE FROM members WHERE booking_id = ?', [booking_id]);
 
         await connection.query(
-            'UPDATE tripdata SET seats = seats + ? WHERE trip_id = ?',
+            'UPDATE tripdata SET seats = seats - ? WHERE trip_id = ?',
             [seats, trip_id]
         );
 

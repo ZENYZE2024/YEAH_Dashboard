@@ -40,6 +40,20 @@ function Addtripdetails() {
     const [coordinators, setCoordinators] = useState([{ name: '', role: '', email: '' }]);
     const [cancellationPolicies, setCancellationPolicies] = useState([]);
     const [selectedPolicies, setSelectedPolicies] = useState([]);
+    const [searchTerm, setSearchTerm] = useState('');
+    const [currentPage, setCurrentPage] = useState(1);
+    const [policiesPerPage] = useState(5); // Number of policies per page
+
+    const filteredPolicies = cancellationPolicies.filter(policy =>
+        policy.policyName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        policy.feeType.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+
+    const indexOfLastPolicy = currentPage * policiesPerPage;
+    const indexOfFirstPolicy = indexOfLastPolicy - policiesPerPage;
+    const currentPolicies = filteredPolicies.slice(indexOfFirstPolicy, indexOfLastPolicy);
+    const totalPages = Math.ceil(filteredPolicies.length / policiesPerPage);
+
     useEffect(() => {
         // Fetch available cancellation policies from the backend
         const fetchCancellationPolicies = async () => {
@@ -54,6 +68,24 @@ function Addtripdetails() {
 
         fetchCancellationPolicies();
     }, []);
+
+    useEffect(() => {
+        // Reset to first page whenever search term changes
+        setCurrentPage(1);
+    }, [searchTerm]);
+
+    
+    const goToNextPage = () => {
+        if (currentPage < totalPages) {
+            setCurrentPage(prevPage => prevPage + 1);
+        }
+    };
+
+    const goToPrevPage = () => {
+        if (currentPage > 1) {
+            setCurrentPage(prevPage => prevPage - 1);
+        }
+    };
 
     const handleCheckboxChange = (policyId) => {
         setSelectedPolicies((prevSelected) => {
@@ -395,7 +427,7 @@ function Addtripdetails() {
                 <AdminNavbar />
             </div>
 
-           
+
             <div className="p-6 max-w-3xl mx-auto bg-white rounded-lg shadow-md">
 
                 <h1 className="text-2xl font-semibold mb-6 text-gray-800">Add Trip Details</h1>
@@ -815,7 +847,20 @@ function Addtripdetails() {
 
                     <div className="mb-4 p-4 border rounded-lg shadow-md bg-white">
                         <h2 className="text-lg font-semibold mb-4 text-gray-800">Cancellation Policies</h2>
-                        {cancellationPolicies.map((policy) => (
+
+                        {/* Search bar */}
+                        <div className="mb-4">
+                            <input
+                                type="text"
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                placeholder="Search policies..."
+                                className="w-full p-2 border rounded-lg text-gray-700"
+                            />
+                        </div>
+
+                        {/* Policies List */}
+                        {currentPolicies.map((policy) => (
                             <div key={policy.id} className="flex items-start mb-4 p-2 border-b last:border-b-0">
                                 <input
                                     type="checkbox"
@@ -826,7 +871,7 @@ function Addtripdetails() {
                                 />
                                 <label htmlFor={`policy-${policy.id}`} className="cursor-pointer text-gray-700">
                                     <span className="font-medium">{policy.feeType}</span> (Policy ID: {policy.id})
-                                    <div className="font-medium">{policy.policyName}</div> 
+                                    <div className="font-medium">{policy.policyName}</div>
 
                                     {policy.dateRanges.length > 0 && (
                                         <ul className="ml-4 mt-1 text-sm text-gray-600">
@@ -842,6 +887,27 @@ function Addtripdetails() {
                                 </label>
                             </div>
                         ))}
+
+                        {/* Pagination Controls */}
+                        <div className="flex justify-between mt-4">
+                            <button
+                                onClick={goToPrevPage}
+                                disabled={currentPage === 1}
+                                className={`px-4 py-2 border rounded ${currentPage === 1 ? 'bg-gray-300' : 'bg-blue-500 text-white'}`}
+                            >
+                                Previous
+                            </button>
+                            <span className="text-gray-700">
+                                Page {currentPage} of {totalPages}
+                            </span>
+                            <button
+                                onClick={goToNextPage}
+                                disabled={currentPage === totalPages}
+                                className={`px-4 py-2 border rounded ${currentPage === totalPages ? 'bg-gray-300' : 'bg-blue-500 text-white'}`}
+                            >
+                                Next
+                            </button>
+                        </div>
                     </div>
 
 
