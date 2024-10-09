@@ -571,21 +571,20 @@ function Edittrips() {
     }));
   };
 
-  const handleItineraryChange = (index, event) => {
-    const { name, value } = event.target;
-
+  const handleItineraryChange = (index, value) => {
     setTripItinerary((prevItinerary) => {
       const updatedItinerary = [...prevItinerary];
 
-      // Ensure all fields, including DATE, are retained when updating any field
+      // Update the DAY_DESCRIPTION field for the specific index
       updatedItinerary[index] = {
         ...updatedItinerary[index], // Keep the other fields, including DATE
-        [name]: value,              // Only update the specific field that changed
+        DAY_DESCRIPTION: value,    // Only update the DAY_DESCRIPTION field
       };
 
       return updatedItinerary;
     });
   };
+
 
 
   const handleSaveDay = async (dayIndex) => {
@@ -703,7 +702,7 @@ function Edittrips() {
     }
   });
   console.log("tripDetails:", tripDetails);
-  const seatsavailable = tripDetails.totalseats - tripDetails.seats;
+  const seatsavailable = tripDetails ? (tripDetails.totalseats - tripDetails.seats) : 0;
   return (
     <div>
       <div>
@@ -957,7 +956,7 @@ function Edittrips() {
                           />
 
                           {/* Day Description textarea */}
-                          <textarea
+                          <ReactQuill
                             name="DAY_DESCRIPTION"
                             value={item.DAY_DESCRIPTION || ''}
                             onChange={(e) => handleItineraryChange(index, e)}
@@ -991,12 +990,7 @@ function Edittrips() {
                           )}
 
                           {item.DAY_DESCRIPTION && (
-                            <>
-                              {item.DAY_DESCRIPTION.split('.').map((sentence, index) => (
-                                // Trim to remove extra spaces and check if the sentence is not empty
-                                sentence.trim() && <p key={index}>{sentence.trim()}.</p>
-                              ))}
-                            </>
+                            <div dangerouslySetInnerHTML={{ __html: item.DAY_DESCRIPTION }} />
                           )}
 
 

@@ -55,7 +55,6 @@ function Addtripdetails() {
     const totalPages = Math.ceil(filteredPolicies.length / policiesPerPage);
 
     useEffect(() => {
-        // Fetch available cancellation policies from the backend
         const fetchCancellationPolicies = async () => {
             try {
                 const response = await axios.get('https://admin.yeahtrips.in/getCancellationPolicies');
@@ -70,11 +69,10 @@ function Addtripdetails() {
     }, []);
 
     useEffect(() => {
-        // Reset to first page whenever search term changes
         setCurrentPage(1);
     }, [searchTerm]);
 
-    
+
     const goToNextPage = () => {
         if (currentPage < totalPages) {
             setCurrentPage(prevPage => prevPage + 1);
@@ -230,7 +228,8 @@ function Addtripdetails() {
         const updatedDays = [...days];
         updatedDays[index] = { ...updatedDays[index], [field]: value };
         setDays(updatedDays);
-    };
+      };
+      
 
     const handleImageChange = (index, e) => {
         const files = Array.from(e.target.files);
@@ -744,9 +743,9 @@ function Addtripdetails() {
                             </div>
                             <div className="mb-2">
                                 <label className="text-sm font-medium text-gray-700 mb-1">Day Description</label>
-                                <textarea
-                                    value={day.DAY_DESCRIPTION}
-                                    onChange={(e) => handleDayChange(index, 'DAY_DESCRIPTION', e.target.value)}
+                                <ReactQuill
+                                    value={day.DAY_DESCRIPTION || ''}
+                                    onChange={(value) => handleDayChange(index, 'DAY_DESCRIPTION', value)}
                                     className="border border-gray-300 rounded-md shadow-sm p-2"
                                     rows="3"
                                 />
