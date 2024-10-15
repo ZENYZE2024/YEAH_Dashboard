@@ -7,7 +7,7 @@ function UserpasttripsDashboard() {
   const [loading, setLoading] = useState(true);
   const [searchTermPast, setSearchTermPast] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
-  const tripsPerPage = 8; // Number of trips per page
+  const tripsPerPage = 15; // Number of trips per page
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -18,22 +18,31 @@ function UserpasttripsDashboard() {
         if (!userId) {
           throw new Error('User not authenticated');
         }
-
+  
         const response = await axios.get('https://admin.yeahtrips.in/userdashboard', {
           params: { user_id: userId }
         });
-
+  
         console.log(response.data);
-        setTrips(response.data);
+  
+        // Ensure the response is an array or properly handle if it's not
+        if (Array.isArray(response.data.trips)) {
+          setTrips(response.data.trips);
+        } else {
+          console.error('Unexpected data format:', response.data);
+          setTrips([]); // Set empty array to avoid future errors
+        }
       } catch (error) {
         console.error('Error fetching trips:', error);
+        setTrips([]); // Set empty array to handle error case
       } finally {
         setLoading(false);
       }
     };
-
+  
     fetchTrips();
   }, []);
+  
 
   const handleBack = () => {
     window.history.back();
@@ -104,52 +113,47 @@ function UserpasttripsDashboard() {
       </div>
 
       {/* Past Trips */}
-      {currentTrips.length > 0 && (
-        <div className="bg-white w-full max-w-screen-xl p-6 rounded-lg shadow-lg mb-6">
-          <h2 className="text-xl font-semibold mb-4">Past Trips</h2>
-          <input
-            type="text"
-            placeholder="Search Past Trips"
-            value={searchTermPast}
-            onChange={(e) => setSearchTermPast(e.target.value)}
-            className="mb-4 p-2 border border-gray-300 rounded-lg"
-          />
-          <table className="min-w-full bg-white">
-            <thead>
-              <tr>
-                <th className="py-2 px-4 border-b text-left">Trip Name</th>
-                <th className="py-2 px-4 border-b text-left">Start Date</th>
-                <th className="py-2 px-4 border-b text-left">End Date</th>
-                <th className="py-2 px-4 border-b text-left">Start Point</th>
-              </tr>
-            </thead>
-            <tbody>
-              {currentTrips.map((trip) => (
-                <tr key={trip.trip_id} className="hover:bg-gray-100">
-                  <td className="py-2 px-4 border-b">{trip.trip_name}</td>
-                  <td className="py-2 px-4 border-b">{trip.trip_start_date}</td>
-                  <td className="py-2 px-4 border-b">{trip.end_date}</td>
-                  <td className="py-2 px-4 border-b">{trip.trip_start_point}</td>
+      {currentTrips.length > 0 ? (
+          <>
+            <table className="min-w-full bg-white">
+              <thead>
+                <tr>
+                  <th className="py-2 px-4 border-b text-left">Trip Name</th>
+                  <th className="py-2 px-4 border-b text-left">Start Date</th>
+                  <th className="py-2 px-4 border-b text-left">End Date</th>
+                  <th className="py-2 px-4 border-b text-left">Start Point</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {currentTrips.map((trip) => (
+                  <tr key={trip.trip_id} className="hover:bg-gray-100">
+                    <td className="py-2 px-4 border-b">{trip.trip_name}</td>
+                    <td className="py-2 px-4 border-b">{trip.trip_start_date}</td>
+                    <td className="py-2 px-4 border-b">{trip.end_date}</td>
+                    <td className="py-2 px-4 border-b">{trip.trip_start_point}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
 
-          {/* Pagination Controls */}
-          <div className="flex justify-center mt-4">
-            {Array.from({ length: totalPages }, (_, index) => (
-              <button
-                key={index + 1}
-                onClick={() => handlePageChange(index + 1)}
-                className={`mx-1 px-3 py-1 rounded-lg ${currentPage === index + 1 ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}
-              >
-                {index + 1}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-    </div>
+            {/* Pagination Controls */}
+            <div className="flex justify-center mt-4">
+              {Array.from({ length: totalPages }, (_, index) => (
+                <button
+                  key={index + 1}
+                  onClick={() => handlePageChange(index + 1)}
+                  className={`mx-1 px-3 py-1 rounded-lg ${currentPage === index + 1 ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}
+                >
+                  {index + 1}
+                </button>
+              ))}
+            </div>
+          </>
+        ) : (
+          <p className="text-center text-lg text-gray-600">No past trips assigned.</p>
+        )}
+      </div>
+    
   );
 }
 

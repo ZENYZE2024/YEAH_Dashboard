@@ -8,7 +8,7 @@ function Supervisorpasttrips() {
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
-  const tripsPerPage = 8; // Number of trips per page
+  const tripsPerPage = 15; // Number of trips per page
   const navigate = useNavigate();
 
   useEffect(() => {

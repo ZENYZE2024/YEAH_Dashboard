@@ -6,17 +6,17 @@ function Readonlypastrips() {
   const [datas, setDatas] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [view, setView] = useState('published');
+  const [view, setView] = useState('draft');
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
-  const tripsPerPage = 8; // Number of trips per page
+  const tripsPerPage = 15; // Number of trips per page
   const navigate = useNavigate();
 
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
       try {
-        const url = `https://admin.yeahtrips.in/alltrips?status=${view}`;
+        const url = `https://admin.yeahtrips.in/alltrips`;
         const response = await axios.get(url);
         setDatas(response.data);
         setLoading(false);

@@ -361,6 +361,7 @@ app.put('/updateuser/:userId', upload.single('profile_image'), async (req, res) 
 
 app.post('/userlogin', async (req, res) => {
     const { email, password } = req.body;
+    console.log(req.body)
 
     try {
         const connection = await pool.getConnection();
@@ -380,7 +381,7 @@ app.post('/userlogin', async (req, res) => {
         const userRole = user[0].role;
 
         const passwordMatch = await bcrypt.compare(password, storedHashedPassword);
-
+        console.log(passwordMatch)
         if (!passwordMatch) {
             await connection.release();
             return res.status(401).json({ message: 'Invalid email or password' });
@@ -406,9 +407,9 @@ app.post('/userlogin', async (req, res) => {
 
 app.get('/alltrips', async (req, res) => {
     try {
-        const { status = 'published' } = req.query;
+        const { status = 'draft' } = req.query;
 
-        if (!['published', 'trash'].includes(status)) {
+        if (!['published', 'trash','draft'].includes(status)) {
             return res.status(400).json({ message: 'Invalid status parameter' });
         }
 
@@ -1140,7 +1141,7 @@ app.get('/supervisordashboard', async (req, res) => {
 
         if (tripIds.length === 0) {
             connection.release();
-            return res.status(404).json({ message: 'No trips found for this supervisor' });
+            return res.json([]); // Return empty array if no trips found
         }
 
         const tripIdsArray = tripIds.map(row => row.trip_id);
@@ -1153,19 +1154,22 @@ app.get('/supervisordashboard', async (req, res) => {
         );
 
         connection.release();
-        res.json(tripData);
+        res.json(tripData.length > 0 ? tripData : []); 
     } catch (error) {
         console.error('Error fetching supervisor dashboard:', error);
         res.status(500).json({ message: 'Internal server error' });
     }
 });
 
+
 app.get('/userdashboard', async (req, res) => {
     const { user_id } = req.query;
-    console.log(user_id)
+    console.log(user_id);
+    
     try {
         const connection = await pool.getConnection();
 
+        // Query for user email
         const [userResult] = await connection.query('SELECT email FROM tripusers WHERE id = ?', [user_id]);
 
         if (userResult.length === 0) {
@@ -1174,7 +1178,9 @@ app.get('/userdashboard', async (req, res) => {
         }
 
         const userEmail = userResult[0].email;
-        console.log(userEmail)
+        console.log(userEmail);
+
+        // Query for trips associated with the user
         const [tripIds] = await connection.query(
             `SELECT tc.trip_id
              FROM tripcoordinators tc
@@ -1184,11 +1190,13 @@ app.get('/userdashboard', async (req, res) => {
 
         if (tripIds.length === 0) {
             connection.release();
-            return res.status(404).json({ message: 'No trips found for this User' });
+            return res.status(200).json({ message: 'No trips found for this user', trips: [] });
         }
-        console.log(tripIds)
+
+        console.log(tripIds);
         const tripIdsArray = tripIds.map(row => row.trip_id);
 
+        // Query for trip data
         const [tripData] = await connection.query(
             `SELECT * 
              FROM tripdata
@@ -1197,15 +1205,74 @@ app.get('/userdashboard', async (req, res) => {
         );
 
         connection.release();
-        res.json(tripData);
+
+        // Check if tripData is empty
+        if (tripData.length === 0) {
+            return res.status(200).json({ message: 'No trip data available', trips: [] });
+        }
+
+        res.json({ message: 'Trips found', trips: tripData });
     } catch (error) {
-        console.error('Error fetching supervisor dashboard:', error);
+        console.error('Error fetching user dashboard:', error);
         res.status(500).json({ message: 'Internal server error' });
     }
-
-
 });
 
+app.get('/userdashboard', async (req, res) => {
+    const { user_id } = req.query;
+    console.log(user_id);
+    
+    try {
+        const connection = await pool.getConnection();
+
+        // Query for user email
+        const [userResult] = await connection.query('SELECT email FROM tripusers WHERE id = ?', [user_id]);
+
+        if (userResult.length === 0) {
+            connection.release();
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        const userEmail = userResult[0].email;
+        console.log(userEmail);
+
+        // Query for trips associated with the user
+        const [tripIds] = await connection.query(
+            `SELECT tc.trip_id
+             FROM tripcoordinators tc
+             WHERE tc.email = ? AND tc.role = 'Trip Coordinator'`,
+            [userEmail]
+        );
+
+        if (tripIds.length === 0) {
+            connection.release();
+            return res.status(200).json({ message: 'No trips found for this user', trips: [] });
+        }
+
+        console.log(tripIds);
+        const tripIdsArray = tripIds.map(row => row.trip_id);
+
+        // Query for trip data
+        const [tripData] = await connection.query(
+            `SELECT * 
+             FROM tripdata
+             WHERE trip_id IN (?)`,
+            [tripIdsArray]
+        );
+
+        connection.release();
+
+        // Check if tripData is empty
+        if (tripData.length === 0) {
+            return res.status(200).json({ message: 'No trip data available', trips: [] });
+        }
+
+        res.json({ message: 'Trips found', trips: tripData });
+    } catch (error) {
+        console.error('Error fetching user dashboard:', error);
+        res.status(500).json({ message: 'Internal server error' });
+    }
+});
 app.get('/getallusers', async (req, res) => {
 
 
@@ -2455,3 +2522,5 @@ app.get('*', (req, res) => {
 app.listen(process.env.PORT, () => {
     console.log(`Server is running on https://admin.yeahtrips.in:${process.env.PORT}`);
 });
+
+

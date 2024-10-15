@@ -22,7 +22,8 @@ function UserDashboard() {
         });
 
         console.log(response.data);
-        setTrips(response.data);
+        // Ensure trips is always an array
+        setTrips(Array.isArray(response.data.trips) ? response.data.trips : []);
       } catch (error) {
         console.error('Error fetching trips:', error);
       } finally {
@@ -57,16 +58,17 @@ function UserDashboard() {
   };
 
   const formatDate = (dateStr) => {
-    // Convert "19th September 2024" to "2024-09-19" for comparison
     const dateParts = dateStr.split(' ');
-    const day = dateParts[0].replace(/[^0-9]/g, ''); // Extract numeric day
-    const month = new Date(Date.parse(dateParts[1] + " 1, 2021")).getMonth() + 1; // Get month number
+    const day = dateParts[0].replace(/[^0-9]/g, '');
+    const month = new Date(Date.parse(dateParts[1] + " 1, 2021")).getMonth() + 1;
     const year = dateParts[2];
-    return `${year}-${month < 10 ? '0' + month : month}-${day < 10 ? '0' + day : day}`; // Return formatted date
+    return `${year}-${month < 10 ? '0' + month : month}-${day < 10 ? '0' + day : day}`;
   };
 
   const currentDate = new Date();
-  const futureTrips = trips.filter(trip => new Date(formatDate(trip.trip_start_date)) >= currentDate);
+
+  // Ensure trips is an array before applying .filter
+  const futureTrips = Array.isArray(trips) ? trips.filter(trip => new Date(formatDate(trip.trip_start_date)) >= currentDate) : [];
 
   const filteredFutureTrips = futureTrips.filter(trip =>
     trip.trip_name.toLowerCase().includes(searchTermFuture.toLowerCase())
@@ -95,46 +97,50 @@ function UserDashboard() {
           onChange={(e) => setSearchTermFuture(e.target.value)}
           className="mb-4 p-2 border border-gray-300 rounded-lg"
         />
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-          {filteredFutureTrips.map((trip) => (
-            <div
-              key={trip.trip_id}
-              className="relative bg-white rounded-lg overflow-hidden shadow-lg transition-transform transform hover:scale-105 hover:shadow-2xl"
-              style={{ height: '400px' }}
-            >
-              <div className="relative flex flex-col justify-between p-6 text-gray-800 bg-white h-full">
-                <div className="flex flex-col flex-grow">
-                  <h2 className="text-2xl font-bold text-gray-800 mb-2">{trip.trip_name}</h2>
-                  <div className="flex flex-col gap-3 text-sm text-gray-600 mb-4">
-                    <div className="flex items-center gap-2">
-                      <span className="font-semibold text-gray-700">Starts From:</span>
-                      <span>{trip.trip_start_date}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="font-semibold text-gray-700">Ends On:</span>
-                      <span>{trip.end_date}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="font-semibold text-gray-700">Starts from:</span>
-                      <span>{trip.trip_start_point}</span>
+        {filteredFutureTrips.length > 0 ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+            {filteredFutureTrips.map((trip) => (
+              <div
+                key={trip.trip_id}
+                className="relative bg-white rounded-lg overflow-hidden shadow-lg transition-transform transform hover:scale-105 hover:shadow-2xl"
+                style={{ height: '400px' }}
+              >
+                <div className="relative flex flex-col justify-between p-6 text-gray-800 bg-white h-full">
+                  <div className="flex flex-col flex-grow">
+                    <h2 className="text-2xl font-bold text-gray-800 mb-2">{trip.trip_name}</h2>
+                    <div className="flex flex-col gap-3 text-sm text-gray-600 mb-4">
+                      <div className="flex items-center gap-2">
+                        <span className="font-semibold text-gray-700">Starts From:</span>
+                        <span>{trip.trip_start_date}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-semibold text-gray-700">Ends On:</span>
+                        <span>{trip.end_date}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-semibold text-gray-700">Starts from:</span>
+                        <span>{trip.trip_start_point}</span>
+                      </div>
                     </div>
                   </div>
-                </div>
-                <div className="flex justify-between space-x-2 mt-auto">
-                  <button
-                    className="bg-gradient-to-r from-blue-500 to-blue-700 text-white py-2 px-4 rounded-lg shadow-lg hover:from-blue-600 hover:to-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-300 transition duration-300"
-                    onClick={() => handleEdit(trip.trip_id)}
-                  >
-                    View
-                  </button>
+                  <div className="flex justify-between space-x-2 mt-auto">
+                    <button
+                      className="bg-gradient-to-r from-blue-500 to-blue-700 text-white py-2 px-4 rounded-lg shadow-lg hover:from-blue-600 hover:to-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-300 transition duration-300"
+                      onClick={() => handleEdit(trip.trip_id)}
+                    >
+                      View
+                    </button>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-center text-lg text-gray-600">No trips assigned</p>
+        )}
       </div>
 
-      {/* Button to navigate to Past Trips */}
+
       <button
         className="bg-gradient-to-r from-green-500 to-green-700 text-white py-2 px-6 rounded-lg shadow-lg hover:from-green-600 hover:to-green-800 focus:outline-none focus:ring-2 focus:ring-green-300 transition duration-300"
         onClick={() => navigate('/userpasttrips')}
