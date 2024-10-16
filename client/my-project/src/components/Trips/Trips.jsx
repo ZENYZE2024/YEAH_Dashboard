@@ -17,6 +17,7 @@ function Trips() {
         const url = `https://admin.yeahtrips.in/alltrips?status=${view}`;
         const response = await axios.get(url);
         setDatas(response.data);
+        console.log(response.data)
         setLoading(false);
       } catch (error) {
         setError(error.response ? error.response.data : error.message || 'Error fetching data');

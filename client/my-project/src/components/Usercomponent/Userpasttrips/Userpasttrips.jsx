@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
-
+import logo from '../images/logo.svg'
 function UserpasttripsDashboard() {
   const [trips, setTrips] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -47,7 +47,9 @@ function UserpasttripsDashboard() {
   const handleBack = () => {
     window.history.back();
   };
-
+  const handleLogoClick=()=>{
+    navigate('/userdashboard')
+    };
   const getUserIdFromToken = () => {
     const token = localStorage.getItem('accessToken');
     if (!token) return null;
@@ -92,6 +94,9 @@ function UserpasttripsDashboard() {
   return (
     <div className="bg-gradient-to-br from-[#ffede8] via-[#FFFFFF] to-[#FFFFFF] min-h-screen flex flex-col items-center py-8">
       <div className="bg-white w-full max-w-screen-xl p-6 rounded-lg shadow-lg mb-6 flex justify-between items-center">
+      <div className="flex items-center cursor-pointer" onClick={handleLogoClick}>
+          <img src={logo} alt="Logo" className="h-10 w-auto" />
+        </div>
         <h1 className="text-2xl font-bold text-gray-800">Past Trips</h1>
         <button
           className="bg-gradient-to-r from-red-500 to-red-700 text-white py-2 px-4 rounded-lg shadow-lg hover:from-red-600 hover:to-red-800 focus:outline-none focus:ring-2 focus:ring-red-300 transition duration-300"

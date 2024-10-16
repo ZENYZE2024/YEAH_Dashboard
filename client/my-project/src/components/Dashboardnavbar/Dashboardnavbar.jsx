@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState,useEffect } from 'react';
 import { FaBars } from 'react-icons/fa'; // Ensure react-icons is installed
 import Menu from '../Menu/Menu';
 import logo from './images/logo.svg';
@@ -7,6 +7,7 @@ import { useNavigate } from 'react-router-dom';
 function AdminNavbar() {
     const [showSidebar, setShowSidebar] = useState(false);
     const navigate = useNavigate();
+    const [role, setRole] = useState("");
 
     const handleLogout = () => {
         localStorage.removeItem('accessToken');
@@ -14,6 +15,10 @@ function AdminNavbar() {
         navigate('/', { replace: true });
     };
 
+    useEffect(() => {
+        const storedRole = localStorage.getItem('role');
+        setRole(storedRole);
+    }, []);
     const handleBack = () => {
         window.history.back();
     };
@@ -23,8 +28,16 @@ function AdminNavbar() {
     };
 
     const handleLogoClick = () => {
-        navigate('/dashboard');
-    };
+        if (role === 'Read-Only') {
+            navigate('/dashboardusersread');
+        } else if (role === 'Super User') {
+            navigate('/Dashboard');
+        } else if (role === 'Trip Supervisor') {
+            navigate('/supervisorlogin');
+        } else if (role === 'User') {
+            navigate('/userdashboard');
+        } 
+      };
 
     const userRole = localStorage.getItem('role');
 
@@ -33,12 +46,12 @@ function AdminNavbar() {
             <div className="flex items-center justify-between bg-gray-100 p-4 shadow-md">
                 <div className="flex items-center space-x-4">
 
-                <div className="flex items-center cursor-pointer" onClick={handleLogoClick}>
+                    <div className="flex items-center cursor-pointer" onClick={handleLogoClick}>
                         <img src={logo} alt="Logo" className="h-10 w-auto" />
                     </div>
-                    
+
                     {/* Menu Icon on the left */}
-                    {userRole !== 'Trip Supervisor' && userRole !== 'Read-Only' && (
+                    {userRole === 'Super User'&& (
                         <button
                             onClick={() => setShowSidebar(!showSidebar)}
                             className="text-gray-700 focus:outline-none border border-black p-2"
@@ -48,7 +61,7 @@ function AdminNavbar() {
                     )}
 
                     {/* Logo */}
-                   
+
                 </div>
 
                 <div className="flex items-center space-x-4 ml-auto">

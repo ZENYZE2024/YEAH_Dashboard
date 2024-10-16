@@ -408,6 +408,7 @@ app.post('/userlogin', async (req, res) => {
 app.get('/alltrips', async (req, res) => {
     try {
         const { status = 'draft' } = req.query;
+        console.log(req.query)
 
         if (!['published', 'trash','draft'].includes(status)) {
             return res.status(400).json({ message: 'Invalid status parameter' });

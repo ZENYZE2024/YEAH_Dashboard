@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
-
+import logo from '../imagess/logo.svg'
 function Supervisorpasttrips() {
   const [trips, setTrips] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -61,7 +61,9 @@ function Supervisorpasttrips() {
   const handleAddTripsClick = () => {
     navigate('/addtrips');
   };
-
+  const handleLogoClick = () => {
+    navigate('/supervisorlogin')
+  };
   const parseTripDate = (dateString) => {
     const normalizedDate = dateString.replace(/(\d+)(st|nd|rd|th)/, '$1');
     return new Date(Date.parse(normalizedDate));
@@ -82,12 +84,15 @@ function Supervisorpasttrips() {
 
   // Pagination logic
   const totalPages = Math.ceil(filteredTrips.length / tripsPerPage);
-  
+
   if (loading) return <p className="text-center text-lg text-gray-600">Loading...</p>;
 
   return (
     <div className="bg-gradient-to-br from-[#ffede8] via-[#FFFFFF] to-[#FFFFFF] min-h-screen flex flex-col items-center py-8">
       <div className="bg-white w-full max-w-screen-xl p-6 rounded-lg shadow-lg mb-6 flex justify-between items-center">
+        <div className="flex items-center cursor-pointer" onClick={handleLogoClick}>
+          <img src={logo} alt="Logo" className="h-10 w-auto" />
+        </div>
         <h1 className="text-2xl font-bold text-gray-800">Supervised Past Trips</h1>
         <div className="flex space-x-4">
           <button
@@ -102,8 +107,8 @@ function Supervisorpasttrips() {
           >
             Logout
           </button>
-          <button 
-            onClick={handleBack} 
+          <button
+            onClick={handleBack}
             className="bg-blue-500 text-white px-4 py-2 rounded-md shadow-md hover:bg-blue-600 focus:outline-none"
           >
             Back

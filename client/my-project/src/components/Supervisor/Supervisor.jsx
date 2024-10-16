@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
-
+import logo from './imagess/logo.svg'
 function Supervisor() {
   const [trips, setTrips] = useState([]);
   const [searchQuery, setSearchQuery] = useState(''); // State to hold the search query
@@ -63,7 +63,9 @@ function Supervisor() {
   const handlePastTripsClick = () => {
     navigate('/supervisorpasttrips');
   };
-
+const handleLogoClick=()=>{
+navigate('/supervisorlogin')
+};
   const parseTripDate = (dateString) => {
     const normalizedDate = dateString.replace(/(\d+)(st|nd|rd|th)/, '$1'); // Remove the suffix
     return new Date(Date.parse(normalizedDate));
@@ -81,8 +83,13 @@ function Supervisor() {
   return (
     <div className="bg-gradient-to-br from-[#ffede8] via-[#FFFFFF] to-[#FFFFFF] min-h-screen flex flex-col items-center py-8">
       <div className="bg-white w-full max-w-screen-xl p-6 rounded-lg shadow-lg mb-6 flex justify-between items-center">
+        <div className="flex items-center cursor-pointer" onClick={handleLogoClick}>
+          <img src={logo} alt="Logo" className="h-10 w-auto" />
+        </div>
         <h1 className="text-2xl font-bold text-gray-800">Supervised Trips</h1>
+
         <div className="flex space-x-4">
+
           <button
             className="bg-gradient-to-r from-blue-500 to-blue-700 text-white py-2 px-4 rounded-lg shadow-lg hover:from-blue-600 hover:to-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-300 transition duration-300"
             onClick={handleAddTripsClick}
