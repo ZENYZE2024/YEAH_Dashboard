@@ -10,7 +10,6 @@ const AddCarousals = () => {
     const fetchCarousals = async () => {
       try {
         const response = await axios.get('https://admin.yeahtrips.in/gettheinformationsincorousals');
-        console.log("Fetched carousals:", response.data); // Log to check the data
         if (Array.isArray(response.data)) {
           setCarousals(response.data);
         } else {
@@ -30,13 +29,11 @@ const AddCarousals = () => {
     if (title && author) {
       const newCarousal = { title, author };
 
-      console.log("Sending carousal data:", newCarousal);
 
       try {
         // POST request with axios
         const response = await axios.post('https://admin.yeahtrips.in/carousaldatasdetailsinformation', newCarousal);
-        console.log("Response status:", response.status);
-        console.log("Response data:", response.data);
+       
         if (response.status === 201) {
           setCarousals([...carousals, response.data]);
           setTitle(""); // Clear title input

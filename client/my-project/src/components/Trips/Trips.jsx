@@ -17,7 +17,6 @@ function Trips() {
         const url = `https://admin.yeahtrips.in/alltrips?status=${view}`;
         const response = await axios.get(url);
         setDatas(response.data);
-        console.log(response.data)
         setLoading(false);
       } catch (error) {
         setError(error.response ? error.response.data : error.message || 'Error fetching data');
@@ -82,6 +81,7 @@ function Trips() {
 
   return (
     <div className="bg-gradient-to-br from-blue-50 via-white to-blue-50 min-h-screen flex flex-col items-center py-8">
+      
       <div className="bg-white w-full max-w-screen-xl p-6 rounded-lg shadow-lg mb-6 flex justify-between items-center border-b border-gray-200">
         <button
           className="bg-gradient-to-r from-green-400 to-green-600 text-white py-2 px-4 rounded-lg shadow-lg hover:from-green-500 hover:to-green-700 focus:outline-none focus:ring-2 focus:ring-green-300 transition duration-300 text-base font-medium"

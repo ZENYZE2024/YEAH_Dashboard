@@ -12,7 +12,6 @@ const EditPolicies = () => {
             try {
                 const response = await axios.get(`https://admin.yeahtrips.in/getcancellationpolicy/${policyId}`);
                 setPolicy(response.data);
-                console.log(response.data);
             } catch (error) {
                 console.error('Error fetching policy:', error);
             }

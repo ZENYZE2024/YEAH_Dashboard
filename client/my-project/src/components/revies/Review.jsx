@@ -18,7 +18,6 @@ const Addreview = () => {
         const fetchCarousals = async () => {
             try {
                 const response = await axios.get('https://admin.yeahtrips.in/reviewcarousals');
-                console.log("Fetched carousals:", response.data);
                 if (Array.isArray(response.data)) {
                     setCarousals(response.data);
                 } else {

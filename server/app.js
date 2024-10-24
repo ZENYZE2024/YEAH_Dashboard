@@ -154,9 +154,7 @@ const sendOTPByEmail = (email, otp) => {
     transporter.sendMail(mailOptions, (error, info) => {
         if (error) {
             console.error('Error sending OTP email:', error);
-        } else {
-            console.log('OTP email sent:', info.response);
-        }
+        } 
     });
 };
 
@@ -209,7 +207,6 @@ app.post('/generatenewpassword', async (req, res) => {
 app.post('/adduser', upload.single('image'), async (req, res) => {
     const { email, password, role, name, link, profile_mode, position } = req.body;
     const profileImage = req.file ? `\\uploads\\${req.file.filename}` : null; // Adjust path based on your setup
-    console.log(req.body);
 
     try {
         const saltRounds = 10;
@@ -252,8 +249,7 @@ app.post('/adduser', upload.single('image'), async (req, res) => {
 
 app.post('/verifytheotp', async (req, res) => {
     const { email, otp } = req.body;
-    console.log(req.body); // Log the received data for debugging
-    console.log("otpstored", otps);
+  
 
     // Check if the email exists in the OTP storage and the OTP matches
     if (otps[email] && otps[email].otp === otp) {
@@ -361,7 +357,6 @@ app.put('/updateuser/:userId', upload.single('profile_image'), async (req, res) 
 
 app.post('/userlogin', async (req, res) => {
     const { email, password } = req.body;
-    console.log(req.body)
 
     try {
         const connection = await pool.getConnection();
@@ -381,7 +376,6 @@ app.post('/userlogin', async (req, res) => {
         const userRole = user[0].role;
 
         const passwordMatch = await bcrypt.compare(password, storedHashedPassword);
-        console.log(passwordMatch)
         if (!passwordMatch) {
             await connection.release();
             return res.status(401).json({ message: 'Invalid email or password' });
@@ -408,7 +402,6 @@ app.post('/userlogin', async (req, res) => {
 app.get('/alltrips', async (req, res) => {
     try {
         const { status = 'draft' } = req.query;
-        console.log(req.query)
 
         if (!['published', 'trash','draft'].includes(status)) {
             return res.status(400).json({ message: 'Invalid status parameter' });
@@ -482,12 +475,7 @@ app.get('/tripitenary/:trip_id', async (req, res) => {
             [trip_id]
         );
 
-        if (rows.length === 0) {
-            return res.status(404).json({ error: 'Trip itinerary data not found' });
-        }
-
-        res.json(rows);
-        console.log(rows)
+        res.json(rows.length > 0 ? rows : []);
     } catch (error) {
         console.error('Error fetching trip itinerary data:', error);
         res.status(500).json({ error: 'An internal server error occurred' });
@@ -499,7 +487,6 @@ app.get('/tripitenary/:trip_id', async (req, res) => {
 
 app.get('/cancellationpolicies/:trip_id', async (req, res) => {
     const trip_id = req.params.trip_id;
-    console.log(trip_id);
 
     if (!trip_id) {
         return res.status(400).json({ error: 'trip_id is required' });
@@ -517,8 +504,9 @@ app.get('/cancellationpolicies/:trip_id', async (req, res) => {
             [trip_id]
         );
 
+        // If no cancellation policies are found, return an empty array
         if (cancellationPolicies.length === 0) {
-            return res.status(404).json({ error: 'Cancellation policies not found for the given trip_id' });
+            return res.json([]); // Return an empty array instead of an error
         }
 
         // Step 2: Extract policy_ids
@@ -533,7 +521,7 @@ app.get('/cancellationpolicies/:trip_id', async (req, res) => {
             [policyIds]
         );
 
-        res.json(policyDetails);
+        res.json(policyDetails.length > 0 ? policyDetails : []);
     } catch (error) {
         console.error('Error fetching cancellation policies:', error);
         res.status(500).json({ error: 'An internal server error occurred' });
@@ -543,14 +531,12 @@ app.get('/cancellationpolicies/:trip_id', async (req, res) => {
 });
 
 
+
 app.put('/updatetrip', upload.single('trip_image'), async (req, res) => {
     const tripDetails = req.body;
-    console.log(req.body)
     const trip_id = tripDetails.trip_id;
     const { trip_start_date, end_date, ...otherDetails } = tripDetails;
 
-    console.log("Trip ID:", trip_id);
-    console.log("Received Trip Data:", req.body);
 
     try {
         // Establish database connection
@@ -570,7 +556,6 @@ app.put('/updatetrip', upload.single('trip_image'), async (req, res) => {
                 const sqlUpdate = `UPDATE tripdata SET ${setClause} WHERE trip_id = ?`;
                 const valuesUpdate = [...Object.values(updateFields), trip_id];
                 await connection.query(sqlUpdate, valuesUpdate);
-                console.log("Trip details updated in tripdata table");
             }
 
             // Handle the image file update if a new file is uploaded
@@ -590,24 +575,19 @@ app.put('/updatetrip', upload.single('trip_image'), async (req, res) => {
                 }
 
                 await connection.query(sql, values);
-                console.log("Image file updated");
             }
 
             // Update the itinerary dates
             if (trip_start_date && end_date) {
-                console.log("Trip start date:", trip_start_date);
-                console.log("Trip end date:", end_date);
-
+               
                 // Fetch the itinerary entries for the given trip_id
                 const [itineraryRows] = await connection.query('SELECT * FROM tripitenary WHERE TRIP_ID = ?', [trip_id]);
 
-                console.log("Itinerary Rows:", itineraryRows);
                 if (itineraryRows.length > 0) {
                     const firstDay = itineraryRows[0];
                     const lastDay = itineraryRows[itineraryRows.length - 1];
 
-                    console.log("First Day:", firstDay);
-                    console.log("Last Day:", lastDay);
+                  
 
                     // Update the first day with the start date
                     const resultFirstDay = await connection.query(
@@ -620,9 +600,7 @@ app.put('/updatetrip', upload.single('trip_image'), async (req, res) => {
                         'UPDATE tripitenary SET DATE = ? WHERE TRIP_ID = ? AND DAY = ?',
                         [end_date, trip_id, lastDay.DAY]
                     );
-                } else {
-                    console.log("No itinerary data found for trip_id:", trip_id);
-                }
+                } 
             }
 
             // Commit the transaction if everything is successful
@@ -654,10 +632,7 @@ app.put('/updatetinerary/:dayIndex', upload.single('image'), async (req, res) =>
     const { DATE, DAY_TITLE, DAY_DESCRIPTION, TRIP_ID, DAY } = req.body;
     const imageFile = req.file; // Access the uploaded image, if present
 
-    // Log the request body and image file details
-    console.log('Request Body:', req.body);
-    console.log('Uploaded Image File:', imageFile);
-
+    
     // Build the SQL update data
     const updateData = {
         DATE,
@@ -669,10 +644,7 @@ app.put('/updatetinerary/:dayIndex', upload.single('image'), async (req, res) =>
     // Filter out undefined fields (e.g., when no new image is uploaded)
     Object.keys(updateData).forEach(key => updateData[key] === undefined && delete updateData[key]);
 
-    // Log the SQL update data and parameters
-    console.log('Update Data:', updateData);
-    console.log('TRIP_ID:', TRIP_ID);
-    console.log('Day Index:', dayIndex);
+ 
 
     try {
         const connection = await pool.getConnection();
@@ -684,7 +656,6 @@ app.put('/updatetinerary/:dayIndex', upload.single('image'), async (req, res) =>
             const [result] = await connection.query(sql, [updateData, TRIP_ID, DAY]);
 
             // Log the result of the query
-            console.log('Query Result:', result);
 
             await connection.commit();
             res.json({ message: 'Itinerary day updated successfully!' });
@@ -703,7 +674,6 @@ app.put('/updatetinerary/:dayIndex', upload.single('image'), async (req, res) =>
 
 
 app.post('/addtrips', upload.any(), async (req, res) => {
-    console.log('Request Body:', req.body);
     try {
         const {
             trip_name, trip_code, cost, seats, trip_start_date_formatted, end_date_formatted,
@@ -741,7 +711,6 @@ app.post('/addtrips', upload.any(), async (req, res) => {
             return point;
         }).filter(point => point);
 
-        console.log("Parsed additional pick-up points:", additionalPickUpPoints);
 
         files.forEach(file => {
             const filePath = `\\uploads\\${file.filename}`;
@@ -784,10 +753,7 @@ app.post('/addtrips', upload.any(), async (req, res) => {
             }
         });
 
-        console.log('Trip Image Path:', tripImagePath);
-        console.log('Additional Images:', additionalImages);
-        console.log('Images Map:', imagesMap);
-        console.log('Coordinator Images:', coordinatorImages);
+       
 
         let connection;
         try {
@@ -822,20 +788,17 @@ app.post('/addtrips', upload.any(), async (req, res) => {
             const [result] = await connection.query(insertTripSQL, tripValues);
             const trip_id = result.insertId;
 
-            console.log('Inserted Trip ID:', trip_id);
 
             // Insert trip image into `images` table
             if (tripImagePath) {
                 const insertImageSQL = `INSERT INTO images (trip_id, file_path) VALUES (?, ?)`;
                 await connection.query(insertImageSQL, [trip_id, tripImagePath]);
-                console.log(`Inserted trip image with path: ${tripImagePath}`);
             }
 
             // Insert additional images into `additionalimages` table
             const insertAdditionalImagesSQL = `INSERT INTO additionalimages (trip_id, additional_images) VALUES (?, ?)`;
             for (const [key, imagePath] of Object.entries(additionalImages)) {
                 await connection.query(insertAdditionalImagesSQL, [trip_id, imagePath]);
-                console.log(`Inserted additional image with path: ${imagePath}`);
             }
 
             // Insert itinerary data into `tripitenary` table
@@ -888,7 +851,6 @@ app.post('/addtrips', upload.any(), async (req, res) => {
                 }
             });
 
-            console.log('Processed Cancellation Policies:', JSON.stringify(processedPolicies, null, 2));
 
             // Update the SQL query to only include policy_id and trip_id
             const insertCancellationPolicySQL = `INSERT INTO cancellationpolicies (
@@ -912,7 +874,6 @@ app.post('/addtrips', upload.any(), async (req, res) => {
                 await connection.query(insertCancellationPolicySQL, cancellationPolicyValues);
             }
 
-            console.log('Inserted cancellation policies');
 
 
             await connection.commit();
@@ -970,8 +931,7 @@ async function updateAdditionalImages(connection, trip_id, additionalImagesData)
         trip_id
     ];
 
-    console.log('Update Additional Images SQL:', updateImageSQL);
-    console.log('Update Additional Images Params:', additionalImagesArray);
+   
 
     try {
         await connection.query(updateImageSQL, additionalImagesArray);
@@ -1000,7 +960,6 @@ async function updateAdditionalImages(connection, trip_id, additionalImagesData)
 
 app.put('/deletetrips/:trip_id', async (req, res) => {
     const { trip_id } = req.params;
-    console.log(trip_id)
     if (!trip_id) {
         return res.status(400).json({ message: 'Trip ID is required' });
     }
@@ -1027,7 +986,6 @@ app.put('/deletetrips/:trip_id', async (req, res) => {
 
 app.get('/getbookingdetails/:trip_id', async (req, res) => {
     const trip_id = req.params.trip_id;
-    console.log("id for bookings", trip_id);
 
     if (!trip_id) {
         return res.status(400).json({ message: 'Trip ID is required' });
@@ -1072,7 +1030,6 @@ app.get('/getbookingdetails/:trip_id', async (req, res) => {
 
         // Send the combined data as the response
         res.json(combinedData);
-        console.log(combinedData);
     } catch (error) {
         console.error('Error connecting to the database:', error);
         res.status(500).json({ error: 'Database connection failed' });
@@ -1102,7 +1059,6 @@ app.get('/cancellations/:trip_id', async (req, res) => {
 
 app.get('/getcoordinatordetails/:trip_id', async (req, res) => {
     const trip_id = req.params.trip_id;
-    console.log(req)
     if (!trip_id) {
         return res.status(400).send('trip_id is required');
     }
@@ -1110,7 +1066,6 @@ app.get('/getcoordinatordetails/:trip_id', async (req, res) => {
     try {
         const [rows] = await pool.query('SELECT * FROM tripcoordinators WHERE trip_id = ?', [trip_id]);
         res.json(rows);
-        console.log(rows)
     } catch (err) {
         console.error(err);
         res.status(500).send('Server error');
@@ -1165,7 +1120,6 @@ app.get('/supervisordashboard', async (req, res) => {
 
 app.get('/userdashboard', async (req, res) => {
     const { user_id } = req.query;
-    console.log(user_id);
     
     try {
         const connection = await pool.getConnection();
@@ -1179,7 +1133,6 @@ app.get('/userdashboard', async (req, res) => {
         }
 
         const userEmail = userResult[0].email;
-        console.log(userEmail);
 
         // Query for trips associated with the user
         const [tripIds] = await connection.query(
@@ -1194,7 +1147,6 @@ app.get('/userdashboard', async (req, res) => {
             return res.status(200).json({ message: 'No trips found for this user', trips: [] });
         }
 
-        console.log(tripIds);
         const tripIdsArray = tripIds.map(row => row.trip_id);
 
         // Query for trip data
@@ -1221,7 +1173,6 @@ app.get('/userdashboard', async (req, res) => {
 
 app.get('/userdashboard', async (req, res) => {
     const { user_id } = req.query;
-    console.log(user_id);
     
     try {
         const connection = await pool.getConnection();
@@ -1235,7 +1186,6 @@ app.get('/userdashboard', async (req, res) => {
         }
 
         const userEmail = userResult[0].email;
-        console.log(userEmail);
 
         // Query for trips associated with the user
         const [tripIds] = await connection.query(
@@ -1250,7 +1200,6 @@ app.get('/userdashboard', async (req, res) => {
             return res.status(200).json({ message: 'No trips found for this user', trips: [] });
         }
 
-        console.log(tripIds);
         const tripIdsArray = tripIds.map(row => row.trip_id);
 
         // Query for trip data
@@ -1283,7 +1232,7 @@ app.get('/getallusers', async (req, res) => {
 
         connection.release();
 
-        res.json(users)
+        res.json(users.length > 0 ? users : []);
     } catch (error) {
         res.status(500).json({ message: 'Internal server error' });
 
@@ -1348,7 +1297,6 @@ app.delete('/carousaldatasdelete/:id', async (req, res) => {
 
 
 app.post('/carousals', upload.any(), async (req, res) => {
-    console.log('Request Body:', req.body);
 
     try {
         const { title, author, rating } = req.body;
@@ -1364,17 +1312,14 @@ app.post('/carousals', upload.any(), async (req, res) => {
 
             if (fieldName === 'image') {
                 carousalImagePath = filePath;
-                console.log(`Set carousalImagePath to: ${filePath}`);
             } else if (fieldName === 'authorImage') {
                 authorImagePath = filePath;
-                console.log(`Set authorImagePath to: ${filePath}`);
             } else {
                 console.warn(`Unexpected fieldname format: ${fieldName}`);
             }
         });
 
-        console.log('Carousal Image Path:', carousalImagePath);
-        console.log('Author Image Path:', authorImagePath);
+       
 
         let connection;
         try {
@@ -1393,12 +1338,10 @@ app.post('/carousals', upload.any(), async (req, res) => {
                 title, author, carousalImagePath, authorImagePath, parseFloat(rating), createdAt // Include author's image path
             ];
 
-            console.log('Inserting Carousal Values:', carousalValues);
 
             const [result] = await connection.query(insertCarousalSQL, carousalValues);
             const carousal_id = result.insertId;
 
-            console.log('Inserted Carousal ID:', carousal_id);
 
             await connection.commit();
             res.json({ message: 'Carousal and author image inserted successfully!' });
@@ -1457,9 +1400,7 @@ app.put('/update-coordinator/:trip_id/:coordinator_id', upload.single('image'), 
     const trip_id = req.params.trip_id;
     const coordinator_id = req.params.coordinator_id;
     const { name, role, email, link, profile_mode, existingImage } = req.body;
-    console.log(req.body)
     const image = req.file ? `\\uploads\\${req.file.filename}` : existingImage; // If no new image, use existing image
-    console.log("Image URL:", image);
 
     let connection;
     try {
@@ -1491,7 +1432,6 @@ app.put('/update-cancellation-policy/:tripId', async (req, res) => {
     const tripId = req.params.tripId; // This is the trip_id you want to update the policy_id for
     const { policy_id } = req.body; // Only policy_id is received from the request body
 
-    console.log("body", req.body);
 
     // Validate request body
     if (!policy_id || !tripId) {
@@ -1540,7 +1480,6 @@ app.get('/getwhatsapp-links', async (req, res) => {
 
         res.json(results);
 
-        console.log(results);
 
     } catch (error) {
         console.error('Error fetching data: ', error);
@@ -1580,7 +1519,6 @@ app.post('/whatsapp-links', async (req, res) => {
 app.put('/updatewhatsapp-links/:id', async (req, res) => {
     const { id } = req.params;
     const { link, name } = req.body;
-    console.log("edit", req.body)
 
     if (!link || !name) {
         return res.status(400).send('Link and name are required');
@@ -1657,8 +1595,7 @@ app.get('/getthecoordinators', async (req, res) => {
 app.post('/entercancellationpolicy', async (req, res) => {
     const { policies } = req.body;
 
-    // Log the received data
-    console.log('Received data:', req.body);
+    
 
     if (!Array.isArray(policies)) {
         return res.status(400).json({ error: 'Invalid input' });
@@ -1671,8 +1608,7 @@ app.post('/entercancellationpolicy', async (req, res) => {
         for (const policy of policies) {
             const { policyName, feeType, dateRanges } = policy;
 
-            // Log the policy data
-            console.log('Processing policy:', feeType, dateRanges);
+           
 
             if (!feeType || !Array.isArray(dateRanges)) {
                 return res.status(400).json({ error: 'Invalid policy data' });
@@ -1728,8 +1664,7 @@ app.put('/updatecancellationpolicy/:id', async (req, res) => {
     const policyId = req.params.id; // Extract policy ID from the URL
     const { policyName, feeType, dateRanges } = req.body; // Extract data from the request body
 
-    // Log the received data
-    console.log('Updating policy:', { policyId, policyName, feeType, dateRanges });
+  
 
     // Check if the input is valid
     if (!feeType || !Array.isArray(dateRanges)) {
@@ -1803,7 +1738,6 @@ app.get('/getCancellationPolicies', async (req, res) => {
             FROM cancellationpolicy AS cp
             LEFT JOIN policy_date_ranges AS dr ON cp.policy_id = dr.policy_id
         `);
-        console.log(rows)
 
         const policies = {};
         rows.forEach(row => {
@@ -1827,7 +1761,6 @@ app.get('/getCancellationPolicies', async (req, res) => {
         const result = Object.values(policies);
 
         res.json(result);
-        console.log(result)
     } catch (error) {
         console.error('Error fetching cancellation policies:', error);
         res.status(500).json({ error: 'Internal Server Error' });
@@ -1875,7 +1808,6 @@ app.delete('/deletecancellationpolicy/:id', async (req, res) => {
 app.post('/discountcoupons', async (req, res) => {
     const { couponCode, discountValue, discountTypes, range, expiryDate, isActive, emails } = req.body;
 
-    console.log(req.body);
 
     // Validate input
     if (!couponCode || !discountValue || !range?.min || !range?.max || !expiryDate) {
@@ -1942,12 +1874,9 @@ app.get('/getthecoupondetails', async (req, res) => {
 
         connection.release();
 
-        if (coupons.length === 0) {
-            return res.status(404).send({ message: 'No coupons found' });
-        }
+        
 
-        res.status(200).send({ coupons });
-        console.log(coupons)
+        res.status(200).send({ coupons: coupons.length ? coupons : [] });        
     } catch (error) {
         console.error('Error fetching coupon details:', error);
         res.status(500).send({ message: 'Error fetching coupon details.' });
@@ -1958,7 +1887,6 @@ app.put('/discountcoupons/:coupon_id', async (req, res) => {
     const couponId = req.params.coupon_id; // Get the coupon ID from the request parameters
     const { couponCode, discountValue, discountTypes, range, expiryDate, isActive, emails } = req.body;
 
-    console.log(req.body); // Log incoming request body
 
     // Validate input
     if (!couponCode || !discountValue || !range.min || !range.max || !expiryDate) {
@@ -2059,7 +1987,6 @@ app.get('/gettheeditpickuppoints', async (req, res) => {
 app.put('/updatethePickupPoints', async (req, res) => {
     const { trip_id, pickupPoints } = req.body;
 
-    console.log(req.body); // For debugging
 
     if (!trip_id || !Array.isArray(pickupPoints)) {
         return res.status(400).json({ error: 'Invalid input' });
@@ -2109,24 +2036,24 @@ app.put('/updatethePickupPoints', async (req, res) => {
 
 
 app.get('/getuser/:id', async (req, res) => {
-    const userId = req.params.id; // Get the user ID from the request parameters
-
+    const userId = req.params.id; 
     try {
-        const connection = await pool.getConnection(); // Get a connection from the pool
+        const connection = await pool.getConnection(); 
         const [results] = await connection.query('SELECT * FROM tripusers WHERE id = ?', [userId]);
 
-        connection.release(); // Release the connection back to the pool
+        connection.release(); 
 
         if (results.length === 0) {
-            return res.status(404).json({ error: 'User not found' }); // User not found response
+            return res.json([]); 
         }
 
-        res.json(results[0]); // Return the specific user object
+        res.json([results[0]]); 
     } catch (error) {
         console.error('Error fetching user:', error);
-        return res.status(500).json({ error: 'Internal server error' }); // Handle errors
+        return res.status(500).json({ error: 'Internal server error' }); 
     }
 });
+
 
 app.get('/getcancellationpolicy/:policyId', async (req, res) => {
     let connection;
@@ -2311,7 +2238,6 @@ app.get('/getperfectmoments', async (req, res) => {
 
 app.delete('/perfectmoments/:id', async (req, res) => {
     const imageId = req.params.id;
-    console.log('Deleting image with ID:', imageId);
 
     let connection = null;
     try {
@@ -2381,7 +2307,6 @@ app.put('/updateblog/:id', upload.single('image'), async (req, res) => {
     const blogId = req.params.id;
     const { title, slug, content, image } = req.body;
 
-    console.log(req.body);
 
     try {
         const connection = await pool.getConnection();

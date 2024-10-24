@@ -23,7 +23,6 @@ function UserpasttripsDashboard() {
           params: { user_id: userId }
         });
   
-        console.log(response.data);
   
         // Ensure the response is an array or properly handle if it's not
         if (Array.isArray(response.data.trips)) {

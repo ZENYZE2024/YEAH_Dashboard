@@ -20,7 +20,6 @@ const Cancellationpolicy = () => {
             try {
                 const response = await axios.get('https://admin.yeahtrips.in/getcancellationpolicies');
                 setExistingPolicies(response.data);
-                console.log(response.data);
             } catch (error) {
                 console.error('Error fetching policies:', error);
             }
@@ -89,7 +88,6 @@ const Cancellationpolicy = () => {
         // Submit policies
         try {
             const response = await axios.post('https://admin.yeahtrips.in/entercancellationpolicy', { policies });
-            console.log(response.data);
             alert('Cancellation policies successfully submitted');
             window.location.reload();
 
@@ -253,40 +251,50 @@ const Cancellationpolicy = () => {
                         </tr>
                     </thead>
                     <tbody>
-                        {existingPolicies.map((policy) => (
-                            policy.dateRanges.map((range, index) => (
-                                <tr key={`${policy.id}-${index}`} className="border-b">
-                                    {index === 0 && (
-                                        <>
-                                            <td rowSpan={policy.dateRanges.length} className="py-4 px-6">
-                                                {policy.policyName}
-                                            </td>
-                                        </>
-                                    )}
-                                    <td className="py-4 px-6">{range.startDate}</td>
-                                    <td className="py-4 px-6">{range.endDate}</td>
-                                    <td className="py-4 px-6">{range.fee}</td>
-                                    {index === 0 && (
-                        <>
-                            <td rowSpan={policy.dateRanges.length} className="py-4 px-6">{policy.feeType}</td>
-                            <td rowSpan={policy.dateRanges.length} className="py-4 px-6 flex space-x-2">
-                                <Link to={`/editpolicies/${policy.id}`}>
-                                    <button className="text-blue-500 hover:text-blue-700 font-semibold">
-                                        Edit
-                                    </button>
-                                </Link>
-                                <button
-                                    onClick={() => handleDeletePolicy(policy.id)}
-                                    className="text-red-500 hover:text-red-700 font-semibold"
-                                >
-                                    Delete
-                                </button>
+
+                        {existingPolicies.length===0 ?(
+                            <tr>
+                            <td colSpan="6" className="text-center py-4 text-gray-500">
+                                No existing policies
                             </td>
-                        </>
-                    )}
-                                </tr>
+                        </tr>
+                        ):(
+                            existingPolicies.map((policy) => (
+                                policy.dateRanges.map((range, index) => (
+                                    <tr key={`${policy.id}-${index}`} className="border-b">
+                                        {index === 0 && (
+                                            <>
+                                                <td rowSpan={policy.dateRanges.length} className="py-4 px-6">
+                                                    {policy.policyName}
+                                                </td>
+                                            </>
+                                        )}
+                                        <td className="py-4 px-6">{range.startDate}</td>
+                                        <td className="py-4 px-6">{range.endDate}</td>
+                                        <td className="py-4 px-6">{range.fee}</td>
+                                        {index === 0 && (
+                                            <>
+                                                <td rowSpan={policy.dateRanges.length} className="py-4 px-6">{policy.feeType}</td>
+                                                <td rowSpan={policy.dateRanges.length} className="py-4 px-6 flex space-x-2">
+                                                    <Link to={`/editpolicies/${policy.id}`}>
+                                                        <button className="text-blue-500 hover:text-blue-700 font-semibold">
+                                                            Edit
+                                                        </button>
+                                                    </Link>
+                                                    <button
+                                                        onClick={() => handleDeletePolicy(policy.id)}
+                                                        className="text-red-500 hover:text-red-700 font-semibold"
+                                                    >
+                                                        Delete
+                                                    </button>
+                                                </td>
+                                            </>
+                                        )}
+                                    </tr>
+                                ))
                             ))
-                        ))}
+                        )}
+                        
                     </tbody>
                 </table>
 

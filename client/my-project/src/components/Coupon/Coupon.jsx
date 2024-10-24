@@ -4,22 +4,22 @@ import axios from 'axios';
 
 const AddCouponForm = () => {
     const [couponCode, setCouponCode] = useState('');
-    const [couponAmount, setCouponAmount] = useState(''); // Coupon value (either percentage or fixed amount)
+    const [couponAmount, setCouponAmount] = useState(''); 
     const [isPercentage, setIsPercentage] = useState(false);
     const [isAmount, setIsAmount] = useState(false);
     const [minAmount, setMinAmount] = useState('');
     const [maxAmount, setMaxAmount] = useState('');
-    const [emails, setEmails] = useState(''); // Now a single string for comma-separated emails
+    const [emails, setEmails] = useState(''); 
     const [expiryDate, setExpiryDate] = useState('');
     const [isActive, setIsActive] = useState(true);
 
     const handleCheckboxChange = (type) => {
         if (type === 'percentage') {
             setIsPercentage(!isPercentage);
-            setIsAmount(false); // Deselect amount checkbox when percentage is selected
+            setIsAmount(false); 
         } else if (type === 'amount') {
             setIsAmount(!isAmount);
-            setIsPercentage(false); // Deselect percentage checkbox when amount is selected
+            setIsPercentage(false); 
         }
     };
 
@@ -29,7 +29,7 @@ const AddCouponForm = () => {
     const handleActivationChange = () => setIsActive(!isActive);
 
     const handleEmailChange = (e) => {
-        setEmails(e.target.value); // Store emails as a comma-separated string
+        setEmails(e.target.value); 
     };
 
     const handleSubmit = async (e) => {
@@ -50,10 +50,8 @@ const AddCouponForm = () => {
             return;
         }
 
-        // Split the emails string by commas and trim whitespace
         const emailList = emails.split(',').map(email => email.trim());
 
-        // Only validate emails if at least one email is provided
         if (emailList.length > 0) {
             const validEmails = emailList.every((email) => email === '' || (email.endsWith('@gmail.com') && email.length > 0));
             if (!validEmails) {
@@ -64,7 +62,7 @@ const AddCouponForm = () => {
 
         const couponData = {
             couponCode,
-            discountValue: couponAmount, // Add coupon value
+            discountValue: couponAmount, 
             discountTypes: {
                 percentage: isPercentage,
                 amount: isAmount,
@@ -75,12 +73,11 @@ const AddCouponForm = () => {
             },
             expiryDate,
             isActive,
-            emails: emailList.filter((email) => email), // Only include non-empty emails
+            emails: emailList.filter((email) => email), 
         };
 
         try {
             const response = await axios.post('https://admin.yeahtrips.in/discountcoupons', couponData);
-            console.log('Coupon Created:', response.data);
 
             alert('Coupon created successfully!');
             window.location.reload()

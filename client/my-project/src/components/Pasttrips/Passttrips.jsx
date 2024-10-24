@@ -17,7 +17,6 @@ function Pasttrips() {
             setLoading(true);
             try {
                 const response = await axios.get('https://admin.yeahtrips.in/alltrips');
-                console.log('Fetched data:', response.data);
                 setDatas(response.data);
             } catch (error) {
                 console.error('Error fetching data:', error);

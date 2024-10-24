@@ -18,14 +18,12 @@ const WhatsApp = () => {
                 const response = await axios.get('https://admin.yeahtrips.in/getwhatsapp-links');
                 
                 if (response.data && response.data.length > 0) {
-                    console.log('Fetched data:', response.data); // Debugging
 
                     // Find the links for letsgoforacamp and yeahcommunity
                     const letsGoLink = response.data.find(link => link.name.toLowerCase() === 'letsgoforacamp') || {};
                     const yeahLink = response.data.find(link => link.name.toLowerCase() === 'yeahcommunity') || {};
 
-                    console.log('letsGoLink:', letsGoLink); // Debugging
-                    console.log('yeahLink:', yeahLink); // Debugging
+                    
 
                     // Update the state with the fetched links
                     setLinks({

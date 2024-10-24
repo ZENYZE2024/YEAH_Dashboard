@@ -7,6 +7,7 @@ import * as XLSX from "xlsx";
 import AdminNavbar from "../Dashboardnavbar/Dashboardnavbar";
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
+import { Helmet } from 'react-helmet';
 
 function Edittrips() {
   const { trip_id } = useParams();
@@ -28,7 +29,6 @@ function Edittrips() {
   useEffect(() => {
     const fetchData = async () => {
 
-      console.log(trip_id)
       const storedRole = localStorage.getItem('role');
       setRole(storedRole);
 
@@ -52,12 +52,7 @@ function Edittrips() {
         setCoordinators(Array.isArray(coordinatorsResponse.data) ? coordinatorsResponse.data : []);
         setCancellationPolicies(Array.isArray(cancellationPoliciesResponse.data) ? cancellationPoliciesResponse.data : []);
         setWaitinglist(Array.isArray(waitinglistresponse.data) ? waitinglistresponse.data : [])
-        console.log("Trip Details:", detailsResponse.data);
-        console.log("Trip Itinerary:", itineraryResponse.data);
-        console.log("Bookings:", bookingsResponse.data);
-        console.log("cancellation", cancellationsresponse.data);
-        console.log("Coordinators:", coordinatorsResponse.data);
-        console.log("waitinglist", waitinglistresponse.data)
+
       } catch (error) {
         console.error("Error fetching trip details or itinerary:", error);
         setError(error.response?.data || error.message || "Error fetching data");
@@ -141,7 +136,6 @@ function Edittrips() {
         trip_id,
         pickupPoints: editedPoints,
       });
-      console.log('Pickup points updated successfully!');
       setPickupPoints(editedPoints); // Optionally update original pickupPoints state
     } catch (error) {
       console.error('Error updating pickup points:', error);
@@ -278,7 +272,6 @@ function Edittrips() {
 
       // Log the formData to verify the contents
       for (let [key, value] of formData.entries()) {
-        console.log(`${key}: ${value}`);
       }
 
       // Send data to backend
@@ -338,7 +331,6 @@ function Edittrips() {
     try {
       const response = await axios.get('https://admin.yeahtrips.in/getcancellationpolicies');
       setAllPolicies(response.data);
-      console.log("Policies", response.data)
       const currentPolicyIds = cancellationPolicies.map(policy => policy.policy_id);
       setSelectedPolicies(currentPolicyIds);
     } catch (error) {
@@ -671,11 +663,9 @@ function Edittrips() {
   }
 
   const handleApprove = (bookingId) => {
-    console.log(`Approval requested for booking ID: ${bookingId}`);
 
     axios.post('https://admin.yeahtrips.in/approve-cancellation', { booking_id: bookingId })
       .then(response => {
-        console.log('Cancellation approved:', response.data);
         window.location.reload();
       })
       .catch(error => {
@@ -701,10 +691,13 @@ function Edittrips() {
       bookingCounts[booking.booking_id] = 1;
     }
   });
-  console.log("tripDetails:", tripDetails);
   const seatsavailable = tripDetails ? (tripDetails.totalseats - tripDetails.seats) : 0;
   return (
     <div>
+       <Helmet>
+                <title>YEAH- Edit {tripDetails.trip_name}</title>
+                <meta name="description" content="Edit your trip details easily with YEAH." />
+            </Helmet>
       <div>
         <AdminNavbar />
       </div>
@@ -904,7 +897,6 @@ function Edittrips() {
                 tripItinerary.map((item, index) => {
                   // Correct the image path format (if image exists)
                   const correctedImagePath = item.DAY_IMG ? item.DAY_IMG.replace(/\\/g, '/') : '';
-                  console.log(`Trip Itinerary Day ${item.DAY} - Image Path: ${correctedImagePath}`);
 
                   return (
                     <div key={index} className="bg-gray-100 p-4 rounded-md shadow-sm">
@@ -1253,6 +1245,7 @@ function Edittrips() {
                   <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
                   <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Phone Number</th>
                   <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">WhatsApp Number</th>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Country</th>
                   <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">State</th>
                   <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">City</th>
                   <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount Paid</th>
@@ -1275,6 +1268,7 @@ function Edittrips() {
                       <td className="px-4 py-2 whitespace-normal break-words">{booking.email}</td>
                       <td className="px-4 py-2 whitespace-nowrap">{booking.phonenumber}</td>
                       <td className="px-4 py-2 whitespace-nowrap">{booking.whatsappnumber}</td>
+                      <td className="px-4 py-2 whitespace-nowrap">{booking.country}</td>
                       <td className="px-4 py-2 whitespace-nowrap">{booking.member_state}</td>
                       <td className="px-4 py-2 whitespace-nowrap">{booking.city}</td>
                       <td className="px-4 py-2 whitespace-nowrap">{booking.bookingDetails?.amount_paid}</td>

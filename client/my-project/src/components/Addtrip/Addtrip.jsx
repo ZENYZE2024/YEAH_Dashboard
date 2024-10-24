@@ -59,7 +59,6 @@ function Addtripdetails() {
             try {
                 const response = await axios.get('https://admin.yeahtrips.in/getCancellationPolicies');
                 setCancellationPolicies(response.data);
-                console.log(response.data)
             } catch (error) {
                 console.error('Error fetching cancellation policies:', error);
             }
@@ -174,7 +173,6 @@ function Addtripdetails() {
 
 
         try {
-            console.log(formData);
             form.append('additionalPickUpPoints', JSON.stringify(formData.additionalPickUpPoints));
             form.append('cancellationPolicies', JSON.stringify(formData.cancellationPolicies));
             const response = await axios.post('https://admin.yeahtrips.in/addtrips', form, {

@@ -23,7 +23,6 @@ function UserDashboard() {
           params: { user_id: userId }
         });
 
-        console.log(response.data);
         // Ensure trips is always an array
         setTrips(Array.isArray(response.data.trips) ? response.data.trips : []);
       } catch (error) {

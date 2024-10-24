@@ -13,7 +13,6 @@ const UploadPerfectMoment = () => {
         const fetchImages = async () => {
             try {
                 const response = await axios.get('https://admin.yeahtrips.in/getperfectmoments');
-                console.log('Fetched images:', response.data); // Log the response data
                 setImages(response.data); // Set the state with the fetched data
             } catch (error) {
                 console.error('Error fetching images:', error);

@@ -33,12 +33,10 @@ const CommunityMembers = () => {
         fetchMembers();
     }, []);
 
-    // Pagination logic for community group members
     const indexOfLastCommunityMember = currentPageCommunity * membersPerPage;
     const indexOfFirstCommunityMember = indexOfLastCommunityMember - membersPerPage;
     const currentCommunityMembers = communityMembers.slice(indexOfFirstCommunityMember, indexOfLastCommunityMember);
 
-    // Pagination logic for RaCamp group members
     const indexOfLastRacampMember = currentPageRacamp * membersPerPage;
     const indexOfFirstRacampMember = indexOfLastRacampMember - membersPerPage;
     const currentRacampMembers = racampMembers.slice(indexOfFirstRacampMember, indexOfLastRacampMember);
@@ -61,7 +59,7 @@ const CommunityMembers = () => {
         <div>
             <AdminNavbar />
             <div className="p-6 max-w-3xl mx-auto">
-                <h2 className="text-2xl font-bold text-center mb-4"> Yeah Community Group Members</h2>
+                <h2 className="text-2xl font-bold text-center mb-4">Yeah Community Group Members</h2>
 
                 <table className="min-w-full border border-gray-300 mb-8">
                     <thead className="bg-gray-100">
@@ -73,14 +71,22 @@ const CommunityMembers = () => {
                         </tr>
                     </thead>
                     <tbody>
-                        {currentCommunityMembers.map(member => (
-                            <tr key={member.id} className="hover:bg-gray-50">
-                                <td className="border-b border-gray-300 px-4 py-2">{member.id}</td>
-                                <td className="border-b border-gray-300 px-4 py-2">{member.name}</td>
-                                <td className="border-b border-gray-300 px-4 py-2">{member.phoneNumber}</td>
-                                <td className="border-b border-gray-300 px-4 py-2">{member.age}</td>
+                        {currentCommunityMembers.length === 0 ? (
+                            <tr>
+                                <td colSpan="4" className="border-b border-gray-300 px-4 py-2 text-center">
+                                    No community members available
+                                </td>
                             </tr>
-                        ))}
+                        ) : (
+                            currentCommunityMembers.map(member => (
+                                <tr key={member.id} className="hover:bg-gray-50">
+                                    <td className="border-b border-gray-300 px-4 py-2">{member.id}</td>
+                                    <td className="border-b border-gray-300 px-4 py-2">{member.name}</td>
+                                    <td className="border-b border-gray-300 px-4 py-2">{member.phoneNumber}</td>
+                                    <td className="border-b border-gray-300 px-4 py-2">{member.age}</td>
+                                </tr>
+                            ))
+                        )}
                     </tbody>
                 </table>
 
@@ -101,7 +107,6 @@ const CommunityMembers = () => {
                     </ul>
                 </div>
 
-                {/* Table for RaCamp Group Members */}
                 <h2 className="text-2xl font-bold text-center mb-4 mt-8">Letsgoforacamp Community Members</h2>
                 <table className="min-w-full border border-gray-300">
                     <thead className="bg-gray-100">
@@ -113,14 +118,22 @@ const CommunityMembers = () => {
                         </tr>
                     </thead>
                     <tbody>
-                        {currentRacampMembers.map(member => (
-                            <tr key={member.id} className="hover:bg-gray-50">
-                                <td className="border-b border-gray-300 px-4 py-2">{member.id}</td>
-                                <td className="border-b border-gray-300 px-4 py-2">{member.name}</td>
-                                <td className="border-b border-gray-300 px-4 py-2">{member.phoneNumber}</td>
-                                <td className="border-b border-gray-300 px-4 py-2">{member.age}</td>
+                        {currentRacampMembers.length === 0 ? (
+                            <tr>
+                                <td colSpan="4" className="border-b border-gray-300 px-4 py-2 text-center">
+                                    No LetsgoforaCamp members available
+                                </td>
                             </tr>
-                        ))}
+                        ) : (
+                            currentRacampMembers.map(member => (
+                                <tr key={member.id} className="hover:bg-gray-50">
+                                    <td className="border-b border-gray-300 px-4 py-2">{member.id}</td>
+                                    <td className="border-b border-gray-300 px-4 py-2">{member.name}</td>
+                                    <td className="border-b border-gray-300 px-4 py-2">{member.phoneNumber}</td>
+                                    <td className="border-b border-gray-300 px-4 py-2">{member.age}</td>
+                                </tr>
+                            ))
+                        )}
                     </tbody>
                 </table>
 

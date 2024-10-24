@@ -15,9 +15,7 @@ function Userslist() {
             setLoading(true);
             try {
                 const response = await axios.get('https://admin.yeahtrips.in/getallusers');
-                // Filter out users with the role "Super User"
-                const filteredUsers = response.data.filter(user => user.role !== 'Super User');
-                setUsers(filteredUsers);
+                setUsers(response.data);
                 setLoading(false);
             } catch (error) {
                 console.error('Error fetching users:', error);
@@ -35,7 +33,6 @@ function Userslist() {
         navigate(`/edituser/${userId}`);
     };
 
-    // Filter users based on search term
     const filteredUsers = users.filter(user =>
         user.email.toLowerCase().includes(searchTerm.toLowerCase())
     );
@@ -56,7 +53,6 @@ function Userslist() {
                     </button>
                 </div>
                 
-                {/* Search Input */}
                 <div className="mb-4">
                     <input
                         type="text"
@@ -71,38 +67,42 @@ function Userslist() {
                     <p className="text-center text-lg text-gray-600">Loading users...</p>
                 ) : (
                     <div className="overflow-x-auto">
-                        <table className="min-w-full bg-white shadow-md rounded-lg overflow-hidden">
-                            <thead className="bg-gray-800 text-white">
-                                <tr>
-                                    <th className="py-3 px-6 text-left">Email</th>
-                                    <th className="py-3 px-6 text-left">Role</th>
-                                    <th className="py-3 px-6 text-left">Position</th> {/* Added Position column */}
-                                    <th className="py-3 px-6 text-left">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {filteredUsers.map((user) => (
-                                    <tr key={user.id} className="border-b hover:bg-gray-100">
-                                        <td className="py-3 px-6">{user.email}</td>
-                                        <td className="py-3 px-6">{user.role}</td>
-                                        <td className="py-3 px-6">{user.position || 'Not Set'}</td> {/* Display position */}
-                                        <td className="py-3 px-6">
-                                            <button
-                                                onClick={() => handleEditUserClick(user.id)}
-                                                className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition duration-300 mr-2"
-                                            >
-                                                Edit
-                                            </button>
-                                            <button
-                                                className="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition duration-300"
-                                            >
-                                                Delete
-                                            </button>
-                                        </td>
+                        {filteredUsers.length === 0 ? ( 
+                            <p className="text-center text-lg text-gray-600">No users available.</p>
+                        ) : (
+                            <table className="min-w-full bg-white shadow-md rounded-lg overflow-hidden">
+                                <thead className="bg-gray-800 text-white">
+                                    <tr>
+                                        <th className="py-3 px-6 text-left">Email</th>
+                                        <th className="py-3 px-6 text-left">Role</th>
+                                        <th className="py-3 px-6 text-left">Position</th> 
+                                        <th className="py-3 px-6 text-left">Actions</th>
                                     </tr>
-                                ))}
-                            </tbody>
-                        </table>
+                                </thead>
+                                <tbody>
+                                    {filteredUsers.map((user) => (
+                                        <tr key={user.id} className="border-b hover:bg-gray-100">
+                                            <td className="py-3 px-6">{user.email}</td>
+                                            <td className="py-3 px-6">{user.role}</td>
+                                            <td className="py-3 px-6">{user.position || 'Not Set'}</td> 
+                                            <td className="py-3 px-6">
+                                                <button
+                                                    onClick={() => handleEditUserClick(user.id)}
+                                                    className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition duration-300 mr-2"
+                                                >
+                                                    Edit
+                                                </button>
+                                                <button
+                                                    className="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition duration-300"
+                                                >
+                                                    Delete
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        )}
                     </div>
                 )}
             </div>
