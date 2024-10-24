@@ -164,7 +164,7 @@ const Addreview = () => {
                                                 {carousal.author_image && ( // Use carousal.author_image instead of carousal.authorImage
                                                     <img
                                                         src={`https://admin.yeahtrips.in/${carousal.author_image}`} // Correct image path
-                                                        alt={carousal.author}
+                                                        alt='carousalauthor'
                                                         className="w-16 h-16 object-cover rounded-full shadow-md" // Styling to make it circular and add shadow
                                                     />
                                                 )}
@@ -192,7 +192,7 @@ const Addreview = () => {
                                             {carousal.image && (
                                                 <img
                                                     src={`https://admin.yeahtrips.in/${carousal.image}`}
-                                                    alt={carousal.title}
+                                                    alt='carousaltitle'
                                                     className="mt-2 w-32 h-32 object-cover rounded-md shadow-md"
                                                 />
                                             )}

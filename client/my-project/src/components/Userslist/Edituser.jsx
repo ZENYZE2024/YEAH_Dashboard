@@ -15,17 +15,24 @@ function EditUser() {
         const fetchUser = async () => {
             try {
                 const response = await axios.get(`https://admin.yeahtrips.in/getuser/${userId}`);
-
+                console.log('Fetched response:', response.data);
+    
                 if (response.data.length === 0) {
                     setUser(null); // No user found
-                }else{
+                } else {
+                    const userData = response.data[0]; // Access the first element in the array
+                    console.log('User data:', userData);
+                    
                     setUser({
-                        ...response.data,
-                        link: response.data.link || '', // Ensure link is a string
+                        name: userData.name || '',
+                        email: userData.email || '',
+                        profile_image: userData.profile_image || '',
+                        profile_mode: userData.profile_mode || '',
+                        link: userData.link || '', // Ensure link is a string
+                        role: userData.role || ''
                     });
                     setLoading(false);
                 }
-               
             } catch (error) {
                 console.error('Error fetching user:', error);
                 setError('Failed to fetch user details');
@@ -34,6 +41,7 @@ function EditUser() {
         };
         fetchUser();
     }, [userId]);
+    
 
     const handleChange = (e) => {
         const { name, value } = e.target;

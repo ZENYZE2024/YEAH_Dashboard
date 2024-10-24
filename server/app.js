@@ -295,6 +295,8 @@ app.post('/forgotthepassword', async (req, res) => {
 app.put('/updateuser/:userId', upload.single('profile_image'), async (req, res) => {
     const { userId } = req.params;
     const { email, password, role, name, link, profile_mode } = req.body;
+    console.log(req.body);
+    console.log(req.file);
 
     // Check if a new image was uploaded
     const profileImage = req.file ? `\\uploads\\${req.file.filename}` : null; // Adjust path based on your setup
@@ -314,7 +316,7 @@ app.put('/updateuser/:userId', upload.single('profile_image'), async (req, res) 
         }
 
         // If a new password is provided, hash it
-        let hashedPassword;
+        let hashedPassword = null;
         if (password) {
             const saltRounds = 10;
             hashedPassword = await bcrypt.hash(password, saltRounds);
@@ -334,14 +336,15 @@ app.put('/updateuser/:userId', upload.single('profile_image'), async (req, res) 
             WHERE id = ?
         `;
 
+        // Explicitly handle undefined values by converting them to null
         const updateParams = [
-            email,
-            hashedPassword,
-            role,
-            profileImage,
-            name,
-            link,
-            profile_mode,
+            email || null,
+            hashedPassword || null,
+            role || null,
+            profileImage || null,
+            name || null,
+            link || null,
+            profile_mode || null,
             userId
         ];
 
@@ -354,6 +357,7 @@ app.put('/updateuser/:userId', upload.single('profile_image'), async (req, res) 
         res.status(500).json({ message: 'Error updating user details' });
     }
 });
+
 
 app.post('/userlogin', async (req, res) => {
     const { email, password } = req.body;
@@ -682,7 +686,6 @@ app.post('/addtrips', upload.any(), async (req, res) => {
             itinerary, trip_description, googlemap, whatsapplink, userId, coordinators,
             cancellationPolicies, cancellationType
         } = req.body;
-
         const trip_start_date = trip_start_date_formatted;
         const end_date = end_date_formatted;
         const totalseats = seats;
@@ -711,7 +714,7 @@ app.post('/addtrips', upload.any(), async (req, res) => {
             return point;
         }).filter(point => point);
 
-
+       
         files.forEach(file => {
             const filePath = `\\uploads\\${file.filename}`;
             const fieldName = file.fieldname;
@@ -834,6 +837,36 @@ app.post('/addtrips', upload.any(), async (req, res) => {
                 ];
                 await connection.query(insertCoordinatorSQL, coordinatorValues);
             }
+
+
+            // Insert additional pick-up points into the `pickuppoints` table
+            const insertPickUpPointsSQL = `INSERT INTO pickuppoints (trip_id, pickuppoint, time) VALUES (?, ?, ?)`;
+
+            // Flatten the additionalPickUpPoints array if it's nested
+            const pickUpPointsArray = additionalPickUpPoints[0]; // Access the first (and only) element
+
+            // Check if pickUpPointsArray is a valid array and process each entry
+            if (Array.isArray(pickUpPointsArray) && pickUpPointsArray.length > 0) {
+                for (const point of pickUpPointsArray) {
+                    // Log each point to see its structure
+                    console.log('Processing point:', point);
+
+                    // Ensure each point has valid 'pickUpPoint' and 'time' fields
+                    if (point && point.pickUpPoint && point.time) {
+                        try {
+                            
+
+                            // Insert into the database
+                            await connection.query(insertPickUpPointsSQL, [trip_id, point.pickUpPoint, point.time]);
+                        } catch (err) {
+                            console.error('Error inserting pick-up point:', point, err);
+                        }
+                    } 
+                }
+            } else {
+                console.warn('pickUpPointsArray is not a valid array or is empty:', pickUpPointsArray);
+            }
+
 
             // Process and insert cancellation policies
             // Process and insert cancellation policies
@@ -1550,6 +1583,36 @@ app.put('/updatewhatsapp-links/:id', async (req, res) => {
     }
 });
 
+app.delete('/deleteuser/:userId', async (req, res) => {
+    const { userId } = req.params;
+
+    let connection;
+    try {
+        connection = await pool.getConnection();
+
+        await connection.beginTransaction();
+
+        const [result] = await connection.execute('DELETE FROM tripusers WHERE id = ?', [userId]);
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ message: 'User not found.' });
+        }
+
+        await connection.commit();
+
+        res.status(200).json({ message: 'User deleted successfully.' });
+    } catch (error) {
+        if (connection) {
+            await connection.rollback();
+        }
+        console.error('Error deleting user:', error);
+        res.status(500).json({ message: 'Error deleting user.' });
+    } finally {
+        if (connection) {
+            connection.release();
+        }
+    }
+});
 
 app.delete('/whatsapp-links/:id', async (req, res) => {
     const { id } = req.params;
@@ -2037,6 +2100,7 @@ app.put('/updatethePickupPoints', async (req, res) => {
 
 app.get('/getuser/:id', async (req, res) => {
     const userId = req.params.id; 
+
     try {
         const connection = await pool.getConnection(); 
         const [results] = await connection.query('SELECT * FROM tripusers WHERE id = ?', [userId]);

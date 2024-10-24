@@ -33,6 +33,16 @@ function Userslist() {
         navigate(`/edituser/${userId}`);
     };
 
+    const handleDeleteUserClick = async (userId) => {
+        if (window.confirm("Are you sure you want to delete this user?")) {
+            try {
+                await axios.delete(`https://admin.yeahtrips.in/deleteuser/${userId}`);
+                setUsers(users.filter(user => user.id !== userId));
+            } catch (error) {
+                console.error('Error deleting user:', error);
+            }
+        }
+    };
     const filteredUsers = users.filter(user =>
         user.email.toLowerCase().includes(searchTerm.toLowerCase())
     );
@@ -93,6 +103,7 @@ function Userslist() {
                                                     Edit
                                                 </button>
                                                 <button
+                                                 onClick={() => handleDeleteUserClick(user.id)}
                                                     className="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition duration-300"
                                                 >
                                                     Delete
